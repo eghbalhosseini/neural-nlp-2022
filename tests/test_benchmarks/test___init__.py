@@ -1,5 +1,5 @@
 import pytest
-from brainio_base.assemblies import DataAssembly
+from brainio.assemblies import DataAssembly
 from pytest import approx
 
 from neural_nlp.benchmarks import benchmark_pool

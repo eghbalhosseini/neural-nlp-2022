@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from brainio_base.assemblies import NeuroidAssembly
+from brainio.assemblies import NeuroidAssembly
 
 from neural_nlp.models.implementations import load_model, model_pool, model_layers
 

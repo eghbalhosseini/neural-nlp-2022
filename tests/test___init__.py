@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import pytest
-from brainio_base.assemblies import NeuroidAssembly
+from brainio.assemblies import NeuroidAssembly
 from pytest import approx
 
 from neural_nlp import score
