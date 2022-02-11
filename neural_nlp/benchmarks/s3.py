@@ -53,6 +53,7 @@ class _S3Storage(_Storage):
                 if attr == 'stimulus_set':
                     value.name = assembly.attrs['stimulus_set_name']
         # put into correct class
+        assembly.attrs['class_module'] = assembly.attrs['class_module'].replace('brainio_base', 'brainio')
         cls_module = importlib.import_module(assembly.attrs['class_module'])
         cls = getattr(cls_module, assembly.attrs['class_name'])
         assembly = cls(assembly)
