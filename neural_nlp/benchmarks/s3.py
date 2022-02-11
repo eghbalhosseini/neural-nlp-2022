@@ -12,6 +12,8 @@ from tqdm import tqdm
 from neural_nlp.stimuli import StimulusSet
 from result_caching import _Storage
 
+cach_dir=os.getenv('RESULTCACHING_HOME')
+
 
 class _S3Storage(_Storage):
     """
@@ -25,7 +27,7 @@ class _S3Storage(_Storage):
         self._key = key
         self._bucket = bucket
         self._region = region
-        self._local_root_dir = os.path.expanduser('~/.neural_nlp/')
+        self._local_root_dir = os.path.expanduser(f'{cach_dir}/.neural_nlp/')
         os.makedirs(self._local_root_dir, exist_ok=True)
 
     def is_stored(self, function_identifier):
