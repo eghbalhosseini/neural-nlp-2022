@@ -21,6 +21,7 @@ from brainscore.utils import LazyLoad
 from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling
 from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.ecog import load_Fedorenko2016
+from neural_nlp.neural_data.mgh_ecog import load_MghMockLang
 from neural_nlp.neural_data.fmri import load_voxels, load_rdm_sentences, \
     load_Pereira2018_Blank
 from neural_nlp.stimuli import load_stimuli, StimulusSet
