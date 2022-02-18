@@ -1,11 +1,15 @@
 import os
+from glob import glob
+
 import logging
 import numpy as np
+import scipy.io as sio
 import xarray as xr
-from brainio_base.assemblies import NeuroidAssembly
+from brainio.assemblies import NeuroidAssembly
 from pathlib import Path
+from scipy import stats
+
 from neural_nlp.stimuli import StimulusSet
-import pandas as pd
 from result_caching import cache, store, store_netcdf
 _logger = logging.getLogger(__name__)
 
