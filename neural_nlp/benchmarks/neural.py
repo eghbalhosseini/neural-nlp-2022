@@ -503,7 +503,9 @@ def read_words(candidate, stimulus_set, reset_column='sentence_id', copy_columns
         for column in copy_columns:
             sentence_activations[column] = ('presentation', part_stimuli[column])
         activations.append(sentence_activations)
-    model_activations = merge_data_arrays(activations)
+
+    #model_activations = merge_data_arrays(activations)
+    model_activations = xr.concat(activations, dim='presentation')
     # merging does not maintain stimulus order. the following orders again
     idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
            itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
