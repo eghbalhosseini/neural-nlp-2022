@@ -43,3 +43,5 @@ def load_MghMockLang():
                                     })
 
     assembly.attrs['stimulus_set'] = df_stimulus_set  # Add the stimulus_set dataframe
+    #data = assembly if data is None else xr.concat(data, assembly)
+    return NeuroidAssembly(assembly)
