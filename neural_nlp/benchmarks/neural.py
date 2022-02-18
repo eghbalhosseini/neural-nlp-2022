@@ -835,6 +835,132 @@ class Fedorenko2016V3CKA(_Fedorenko2016V3SubjectWise):
                                         splits=5, kfold=True, test_size=None))
         super(Fedorenko2016V3CKA, self).__init__(identifier=identifier, metric=metric)
 
+class _MghLangloc:
+    """
+    data source:
+    """
+
+    def __init__(self, identifier, metric):
+        self._identifier = identifier
+        assembly = LazyLoad(self.load_assembly)
+        self._target_assembly = assembly
+        self._metric = metric
+        self._average_sentence = False
+        #self._ceiler = ExtrapolationCeiling(subject_column='subject_UID')
+        #self._electrode_ceiler = self.ElectrodeExtrapolation(subject_column='subject_UID')
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    def load_assembly(self):
+        raise NotImplementedError()
+
+    def __call__(self, candidate):
+        _logger.info('Computing activations')
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = read_words(candidate, stimulus_set,
+                                       average_sentence=self._average_sentence, copy_columns=['stimulus_id'])
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        score = self.apply_metric(model_activations, self._target_assembly)
+        #score = self.ceiling_normalize(score)
+        return score
+
+    def apply_metric(self, model_activations, target_assembly):
+        return self._metric(model_activations, target_assembly)
+
+    def ceiling_normalize(self, score):
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
+        score = ceil_neuroids(raw_neuroids, self.ceiling, subject_column='subject_UID')
+        return score
+
+    @property
+    def ceiling(self):
+        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    @property
+    def electrode_ceiling(self):
+        return self._electrode_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    class ElectrodeExtrapolation(ExtrapolationCeiling):
+        """ extrapolate to infinitely many electrodes """
+
+        def __init__(self, *args, **kwargs):
+            super(_MghLangloc.ElectrodeExtrapolation, self).__init__(*args, **kwargs)
+            self._rng = RandomState(0)
+            self._num_samples = 15  # number of samples per electrode selection
+
+        def collect(self, identifier, assembly, metric):
+            """ Instead of iterating over subject combinations and then afterwards over holdout subjects,
+            we here iterate over holdout subjects and then over electrode sub-combinations of the remaining pool. """
+            subjects = set(assembly[self.subject_column].values)
+            scores = []
+            for holdout_subject in tqdm(subjects, desc='subjects'):
+                subject_pool = subjects - {holdout_subject}
+                subject_pool_assembly = assembly[{'neuroid': [subject in subject_pool
+                                                              for subject in assembly[self.subject_column].values]}]
+                holdout_subject_assembly = assembly[{'neuroid': [subject == holdout_subject
+                                                                 for subject in assembly[self.subject_column].values]}]
+
+                electrodes = subject_pool_assembly['neuroid_id'].values
+                electrodes_range = np.arange(5, len(electrodes), 5)
+                for num_electrodes in tqdm(electrodes_range, desc='num electrodes'):
+                    electrodes_combinations = self._choose_electrodes(electrodes, num_electrodes,
+                                                                      num_choices=self._num_samples)
+                    for electrodes_split, electrodes_selection in enumerate(electrodes_combinations):
+                        electrodes_assembly = subject_pool_assembly[{'neuroid': [
+                            neuroid_id in electrodes_selection
+                            for neuroid_id in subject_pool_assembly['neuroid_id'].values]}]
+                        score = metric(electrodes_assembly, holdout_subject_assembly)
+                        # store scores
+                        score = score.expand_dims(f"sub_{self.subject_column}")
+                        score.__setitem__(f"sub_{self.subject_column}", [holdout_subject])
+                        score = score.expand_dims('num_electrodes').expand_dims('electrodes_split')
+                        score['num_electrodes'] = [num_electrodes]
+                        score['electrodes_split'] = [electrodes_split]
+                        scores.append(score)
+
+            scores = Score.merge(*scores)
+            ceilings = scores.raw
+            ceilings = ceilings.rename({'split': 'subsplit'}).stack(split=['electrodes_split', 'subsplit'])
+            ceilings.attrs['raw'] = scores
+            return ceilings
+
+        def _choose_electrodes(self, electrodes, num_electrodes, num_choices):
+            choices = [self._rng.choice(electrodes, size=num_electrodes, replace=False) for _ in range(num_choices)]
+            return choices
+
+class MghLanglocEncoding(_MghLangloc):
+    """
+    mgh benchmark with encoding metric
+
+    data source:
+    """
+
+    def __init__(self, identifier):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
+                                                                       stratification_coord='sentence_id'))
+        super(MghLanglocEncoding, self).__init__(identifier=identifier, metric=metric)
+
+class MghLanglocAudioV1Encoding(MghLanglocEncoding):
+    """
+    MghAnnSet1 benchmark, language electrodes, elec_data_dec
+    data source:
+    """
+    def load_assembly(self):
+        return LazyLoad(lambda: load_MghLanglocAudio(electrodes='language', version='elec_data_dec'))
+
+class MghMockLangEncoding(MghLanglocEncoding):
+    """
+    MghAnnSet1 benchmark, language electrodes, elec_data_dec
+    data source:
+    """
+    def load_assembly(self):
+        return LazyLoad(lambda: load_MghMockLang())
+
 
 def aggregate(score, combine_layers=True):
     if hasattr(score, 'experiment') and score['experiment'].ndim > 0:
@@ -906,6 +1032,7 @@ benchmark_pool = [
     ('Pereira2018-encoding', PereiraEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
+    ('MghMockLang-encoding', MghMockLangEncoding),
     # secondary benchmarks
     ('Pereira2018-rdm', PereiraRDM),
     ('Pereira2018-cka', PereiraCKA),
