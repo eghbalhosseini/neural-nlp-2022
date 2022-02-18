@@ -27,6 +27,7 @@ from neural_nlp.neural_data.fmri import load_voxels, load_rdm_sentences, \
 from neural_nlp.stimuli import load_stimuli, StimulusSet
 from neural_nlp.utils import ordered_set
 from result_caching import store
+import xarray as xr
 
 _logger = logging.getLogger(__name__)
 
