@@ -35,8 +35,8 @@ from transformers.modeling_outputs import (
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import logging
 from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
-from bplm.models.gpt_neox_model.configuration_gpt_neox import GPTNeoXConfig, GPTNeoXPosLearnedConfig
-from bplm.models.gpt_neox_model.modeling_gpt_neox import GPTNeoXMLP
+from neural_nlp.models.gpt_neox_model.configuration_gpt_neox import GPTNeoXConfig, GPTNeoXPosLearnedConfig
+from neural_nlp.models.gpt_neox_model.modeling_gpt_neox import GPTNeoXMLP
 
 logger = logging.get_logger(__name__)
 

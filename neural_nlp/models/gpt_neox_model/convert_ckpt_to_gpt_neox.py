@@ -5,11 +5,11 @@ import argparse
 from pathlib import Path
 import torch
 from collections import namedtuple
-from bplm.models.gpt_neox_model.modeling_gpt_neox import GPTNeoXForCausalLM
-from bplm.models.gpt_neox_model.modeling_gpt_neox_learned import GPTNeoXPosLearnedForCausalLM
-from bplm.models.gpt_neox_model.configuration_gpt_neox import GPTNeoXConfig , GPTNeoXPosLearnedConfig
+from neural_nlp.models.gpt_neox_model.modeling_gpt_neox import GPTNeoXForCausalLM
+from neural_nlp.models.gpt_neox_model.modeling_gpt_neox_learned import GPTNeoXPosLearnedForCausalLM
+from neural_nlp.models.gpt_neox_model.configuration_gpt_neox import GPTNeoXConfig , GPTNeoXPosLearnedConfig
 from transformers import AutoTokenizer, GPT2Config
-from bplm.models.gpt_neox_model.neox_args import NeoXArgsAll
+from neural_nlp.models.gpt_neox_model.neox_args import NeoXArgsAll
 import glob
 import json
 from tqdm import tqdm
