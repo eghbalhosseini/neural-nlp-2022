@@ -18,6 +18,13 @@ from tqdm import tqdm
 from brainscore.utils import LazyLoad
 from neural_nlp.models.wrapper.core import ActivationsExtractorHelper
 from neural_nlp.models.wrapper.pytorch import PytorchWrapper
+from neural_nlp.models.gpt_neox_model import GPTNeoXModel,GPTNeoXPosLearnedModel,GPTNeoXPosLearnedConfig,GPTNeoXConfig
+from transformers import AutoConfig, AutoModel, AutoModelWithLMHead,AutoTokenizer
+AutoConfig.register('gpt-neox',GPTNeoXConfig)
+AutoConfig.register('gpt-neox-pos-learned',GPTNeoXPosLearnedConfig)
+AutoModel.register(GPTNeoXConfig, GPTNeoXModel)
+AutoModel.register(GPTNeoXPosLearnedConfig, GPTNeoXPosLearnedModel)
+
 
 _ressources_dir = (Path(__file__).parent / '..' / '..' / 'ressources' / 'models').resolve()
 
@@ -1179,6 +1186,21 @@ for identifier, num_layers in [
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
+
+
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_4/global_step15000/',
+             '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/global_step155000/']
+for identifier, num_layers, w_file, c_file in [
+        ('gpt2-neox-pos_learned-100M-v2', 12, f'{checkpoints[0]}/', f'{checkpoints[0]}/config.json'),
+        ('gpt2-neox-pos_learned-1B-v2', 12, f'{checkpoints[1]}/', f'{checkpoints[1]}/config.json')]:
+
+    transformer_configurations.append(dict(
+        prefix='gpt-neox-pos-learned', weight_identifier=identifier, weight_file=w_file , config_file=c_file,tokenizer_identifier='gpt2'
+        ,tokenizer_special_tokens=('ġ',),
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
 # transformer xl
 transformer_configurations.append(dict(
     prefix='TransfoXL', weight_identifier='transfo-xl-wt103',
@@ -1301,33 +1323,58 @@ for untrained in False, True:
         configuration = copy.deepcopy(configuration)
         # either use the defined identifier or the weights used
         identifier = configuration.get('identifier', configuration['weight_identifier'])
+        configuration['trained'] = True
+        prefix = configuration.get('identifier', configuration['prefix'])
 
         if untrained:
             identifier += '-untrained'
             configuration['trained'] = False
-
+        if prefix == 'nyu-mll':
+            configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
+            configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelWithLMHead')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', 'AutoTokenizer')
+            configuration['module_ctr'] = 'transformers'
+        elif prefix == 'stanford-crfm' or prefix == 'mistral':
+            configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
+            configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelForCausalLM')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', 'AutoTokenizer')
+            configuration['module_ctr'] = 'transformers'
+        elif prefix == 'gpt-neox-pos-learned':
+            configuration['config_ctr'] = configuration.get('config_ctr', 'GPTNeoXPosLearnedConfig')
+            configuration['model_ctr'] = configuration.get('model_ctr', 'GPTNeoXPosLearnedModel')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', 'GPT2Tokenizer')
+            configuration['module_ctr'] = 'neural_nlp.models.gpt_neox_model'
+        else:
         # either use the defined values for config, model and tokenizer or build from prefix
-        configuration['config_ctr'] = configuration.get('config_ctr', configuration['prefix'] + 'Config')
-        configuration['model_ctr'] = configuration.get('model_ctr', configuration['prefix'] + 'Model')
-        configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', configuration['prefix'] + 'Tokenizer')
-
+            configuration['config_ctr'] = configuration.get('config_ctr', configuration['prefix'] + 'Config')
+            configuration['model_ctr'] = configuration.get('model_ctr', configuration['prefix'] + 'Model')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', configuration['prefix'] + 'Tokenizer')
+            configuration['module_ctr'] = 'transformers'
 
         def model_instantiation(identifier=identifier, configuration=frozenset(configuration.items())):
             configuration = dict(configuration)  # restore from frozen
-            module = import_module('transformers')
+            module = import_module(configuration['module_ctr'])
             config_ctr = getattr(module, configuration['config_ctr'])
+            config = config_ctr.from_pretrained(configuration['config_file'])
             model_ctr = getattr(module, configuration['model_ctr'])
             tokenizer_ctr = getattr(module, configuration['tokenizer_ctr'])
             # Load pre-trained model tokenizer (vocabulary) and model
-            config = config_ctr.from_pretrained(configuration['weight_identifier'])
-            tokenizer = tokenizer_ctr.from_pretrained(configuration['weight_identifier'])
+            tokenizer = tokenizer_ctr.from_pretrained(configuration['tokenizer_identifier'])
+
             state_dict = None
+            config.output_hidden_states = True
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
                 model = model_ctr(config=config)
                 state_dict = model.state_dict()  # capture initial random weights and force load them later
-            model = model_ctr.from_pretrained(configuration['weight_identifier'],
-                                              output_hidden_states=True, state_dict=state_dict)
+            else:
+                if configuration['prefix'] == 'gpt-neox-pos-learned':
+                    config.output_hidden_states = True
+                    model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
+                                                      state_dict=state_dict)
+                else:
+                    model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,
+                                                      state_dict=state_dict)
             model_wrapper = configuration.get('model_wrapper', None)
             if model_wrapper:
                 model = model_wrapper(model)
