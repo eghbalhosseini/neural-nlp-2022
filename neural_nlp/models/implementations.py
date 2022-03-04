@@ -1216,17 +1216,6 @@ for (identifier, num_layers), ckpnts in itertools.product([
     ))
 
 
-for identifier, num_layers, w_file, c_file in [
-        ('gpt2-neox-pos_learned-100M-v2', 12, f'{checkpoints[0]}/', f'{checkpoints[0]}/config.json'),
-        ('gpt2-neox-pos_learned-1B-v2', 12, f'{checkpoints[1]}/', f'{checkpoints[1]}/config.json')]:
-
-    transformer_configurations.append(dict(
-        prefix='gpt-neox-pos-learned', weight_identifier=identifier, weight_file=w_file , config_file=c_file,tokenizer_identifier='gpt2'
-        ,tokenizer_special_tokens=('ġ',),
-        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
-        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
-    ))
-
 # transformer xl
 transformer_configurations.append(dict(
     prefix='TransfoXL', weight_identifier='transfo-xl-wt103',
