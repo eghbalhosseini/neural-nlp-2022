@@ -5,7 +5,6 @@ import os
 import numpy as np
 import getpass
 
-
 from transformers import GPT2Tokenizer
 from transformers import GPT2Model
 from transformers import GPT2Config
@@ -20,14 +19,18 @@ if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     benchmark_name='Fedorenko2016v3-encoding'
     model_name="distilgpt2"
-    config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
-    model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
+    #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
+    #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
+    config_file='distilgpt2'
+    model_file = 'distilgpt2'
     benchmark_tsk = benchmark_name
 
-    config = GPT2Config.from_json_file(config_file)
+    #config = GPT2Config.from_json_file(config_file)
+    config = GPT2Config.from_pretrained(config_file)
     num_layers = config.n_layer
     config.output_hidden_states = True
     config.state_dict = None
+    config.weight_identifier='distilgpt2'
     model = GPT2Model(config)
     model.from_pretrained(model_file, config=config)
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -52,4 +55,4 @@ if __name__ =='__main__':
     #score_results=score_function(benchmark=benchmark_tsk, model=model_identifier, model_impl=transformer,
     #                  layers=list(brainscore_config['layers']))
     score_results=score_function(benchmark=benchmark_tsk, model=model_identifier, model_impl=transformer,
-                   layers=[list(brainscore_config['layers'])[-1]])
+                   layers=[list(brainscore_config['layers'])])
