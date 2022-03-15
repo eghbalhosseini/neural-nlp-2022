@@ -1216,6 +1216,48 @@ for (identifier, num_layers), ckpnts in itertools.product([
     ))
 
 
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
+for (identifier, num_layers), ckpnts in itertools.product([
+    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(250,40250+250,1000)):
+    identifier = f"{identifier}-ckpnt-{ckpnts}"
+    transformer_configurations.append(dict(
+        prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
+        weight_identifier=identifier, weight_file=f'{checkpoints[0]}/global_step{ckpnts}/pytorch_model.bin',
+        config_file=f'{checkpoints[0]}/global_step{ckpnts}/config.json'
+        , tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_10m_v2/gpt2/checkpoints_6/']
+for (identifier, num_layers), ckpnts in itertools.product([
+    ('gpt2-neox-pos_learned-10M-v2', 12,)], np.arange(250,11500+250,1000)):
+    identifier = f"{identifier}-ckpnt-{ckpnts}"
+    transformer_configurations.append(dict(
+        prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
+        weight_identifier=identifier, weight_file=f'{checkpoints[0]}/global_step{ckpnts}/pytorch_model.bin',
+        config_file=f'{checkpoints[0]}/global_step{ckpnts}/config.json'
+        , tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1m_v2/gpt2/checkpoints_7/']
+for (identifier, num_layers), ckpnts in itertools.product([
+    ('gpt2-neox-pos_learned-1M-v2', 12,)], np.arange(250,4000+250,250)):
+    identifier = f"{identifier}-ckpnt-{ckpnts}"
+    transformer_configurations.append(dict(
+        prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
+        weight_identifier=identifier, weight_file=f'{checkpoints[0]}/global_step{ckpnts}/pytorch_model.bin',
+        config_file=f'{checkpoints[0]}/global_step{ckpnts}/config.json'
+        , tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
+        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
 # transformer xl
 transformer_configurations.append(dict(
     prefix='TransfoXL', weight_identifier='transfo-xl-wt103',
