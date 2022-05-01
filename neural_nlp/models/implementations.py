@@ -14,10 +14,55 @@ from brainio.fetch import fullname
 from numpy.random.mtrand import RandomState
 from pathlib import Path
 from tqdm import tqdm
+import torch
 
 from brainscore.utils import LazyLoad
 from neural_nlp.models.wrapper.core import ActivationsExtractorHelper
 from neural_nlp.models.wrapper.pytorch import PytorchWrapper
+
+def permute_mat(mat):
+    mat_flat = mat.flatten()
+    assert(mat_flat.ndim==1)
+    shuffle_idx = torch.randperm(mat_flat.shape[0])
+    mat_flat_rnd = mat_flat[shuffle_idx]
+    mat_perm = torch.reshape(mat_flat_rnd, mat.shape)
+    return mat_perm
+
+def initialize_transformer_weights(model,mu=0,sigma=0.02):
+    model_perm = copy.deepcopy(model)
+    n_ctx = model_perm.config.n_ctx
+    orig_states = model_perm.state_dict()
+    perm_states = dict.fromkeys(orig_states.keys())
+    for key in tqdm(orig_states.keys(), desc='permuting weights'):
+        if 'attn.c_attn.weight' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = b
+        elif 'attn.c_attn.bias' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        elif 'attn.c_proj' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        # modify layer norm
+        elif 'ln' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        # modify feedforward layer
+        elif 'mlp' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        elif 'wte' in key or 'wpe' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        else:
+            perm_states[key] = orig_states[key]
+    return perm_states
 
 _ressources_dir = (Path(__file__).parent / '..' / '..' / 'ressources' / 'models').resolve()
 
@@ -1325,7 +1370,8 @@ for untrained in False, True:
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
                 model = model_ctr(config=config)
-                state_dict = model.state_dict()  # capture initial random weights and force load them later
+                state_dict = initialize_transformer_weights(model)
+                #state_dict = model.state_dict()  # capture initial random weights and force load them later
             model = model_ctr.from_pretrained(configuration['weight_identifier'],
                                               output_hidden_states=True, state_dict=state_dict)
             model_wrapper = configuration.get('model_wrapper', None)
