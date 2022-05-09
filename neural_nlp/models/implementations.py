@@ -1216,9 +1216,9 @@ for (identifier, num_layers), ckpnts in itertools.product([
     ))
 
 
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(250,40250+250,1000)):
+    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(100,3000+100,100)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),

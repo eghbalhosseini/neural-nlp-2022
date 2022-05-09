@@ -25,8 +25,8 @@ def get_args():
 
 def mock_get_args():
     mock_args = namedtuple('debug', ['checkpoint_dir', 'hf_save_dir'])
-    debug_args = mock_args('/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/global_step155000/',
-                        '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/global_step155000/'
+    debug_args = mock_args('/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step3000/',
+                        '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step3000/'
                           )
     return debug_args
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         args=get_args()
     #
     chpnt_pth=Path(args.checkpoint_dir)
-    config_dir = os.path.join(chpnt_pth.parent, "configs")
+    config_dir = os.path.join(chpnt_pth, "configs")
     config_extract = convert_gpt_neox_config_to_hf(config_dir)
     config_extract.save_pretrained(args.hf_save_dir)
     state_dict = get_state_dict_from_checkpoint_dir(args.checkpoint_dir, config_extract)
