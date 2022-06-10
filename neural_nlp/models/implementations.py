@@ -1188,37 +1188,23 @@ for identifier, num_layers in [
     ))
 
 
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_4/global_step15000/',
-             '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/global_step155000/']
-for identifier, num_layers, w_file, c_file in [
-        ('gpt2-neox-pos_learned-100M-v2', 12, f'{checkpoints[0]}/', f'{checkpoints[0]}/config.json'),
-        ('gpt2-neox-pos_learned-1B-v2', 12, f'{checkpoints[1]}/', f'{checkpoints[1]}/config.json')]:
-
-    transformer_configurations.append(dict(
-        prefix='gpt-neox-pos-learned', weight_identifier=identifier, weight_file=w_file , config_file=c_file,tokenizer_identifier='gpt2'
-        ,tokenizer_special_tokens=('ġ',),
-        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
-        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
-    ))
-
 checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/']
 for (identifier, num_layers), ckpnts in itertools.product([
     ('gpt2-neox-pos_learned-1B-v2', 12,)], np.arange(2500,155000+2500,2500)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
-        weight_identifier=identifier, weight_file=f'{checkpoints[0]}/global_step{ckpnts}/pytorch_model.bin',
+        weight_identifier=identifier,
+        weight_file=f'{checkpoints[0]}/global_step{ckpnts}/pytorch_model.bin',
         config_file=f'{checkpoints[0]}/global_step{ckpnts}/config.json'
         , tokenizer_identifier='gpt2',
-        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
-        # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
-
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/']
+# 161 checkpoints
+checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(100,3000+100,100)):
+    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(250,40250+100,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
@@ -1230,9 +1216,10 @@ for (identifier, num_layers), ckpnts in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
+# 46 models
 checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_10m_v2/gpt2/checkpoints_6/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-10M-v2', 12,)], np.arange(250,11500+250,1000)):
+    ('gpt2-neox-pos_learned-10M-v2', 12,)], np.arange(250,11500+250,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
@@ -1270,7 +1257,7 @@ for identifier, num_layers in [
     ('xlnet-large-cased', 24),
 ]:
     transformer_configurations.append(dict(
-        prefix='XLNet', tokenizer_special_tokens=(SPIECE_UNDERLINE,), weight_identifier=identifier,
+        prefix='XLNet', tokenizer_special_tokens=(SPIECE_UNDERLINE,), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_xlnet.py#L962
         layers=('drop',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
@@ -1283,7 +1270,7 @@ for identifier, num_layers in [
     ('xlm-mlm-100-1280', 16),
 ]:
     transformer_configurations.append(dict(
-        prefix='XLM', tokenizer_special_tokens=('</w>',), weight_identifier=identifier,
+        prefix='XLM', tokenizer_special_tokens=('</w>',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_xlm.py#L638
         layers=('dropout',) + tuple(f'encoder.layer_norm2.{i}' for i in range(num_layers))
     ))
@@ -1294,7 +1281,7 @@ for identifier, num_layers in [
     ('distilroberta-base', 6),
 ]:
     transformer_configurations.append(dict(
-        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,
+        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
@@ -1303,14 +1290,14 @@ for identifier, num_layers in [
     ('distilbert-base-uncased', 6),
 ]:
     transformer_configurations.append(dict(
-        prefix='DistilBert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,
+        prefix='DistilBert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_distilbert.py#L482
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_distilbert.py#L258
         layers=('embeddings',) + tuple(f'transformer.layer.{i}' for i in range(num_layers))
     ))
 # ctrl
 transformer_configurations.append(dict(
-    prefix='CTRL', tokenizer_special_tokens=('ġ',), weight_identifier='ctrl',
+    prefix='CTRL', tokenizer_special_tokens=('ġ',), weight_identifier='ctrl',weight_file=identifier,config_file=identifier,
     # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_ctrl.py#L388
     # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_ctrl.py#L408
     layers=('w',) + tuple(f'h.{i}' for i in range(48))
@@ -1324,7 +1311,7 @@ for (identifier, num_layers), version in itertools.product([
 ], [1, 2]):
     identifier = f"{identifier}-v{version}"
     transformer_configurations.append(dict(
-        prefix='Albert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,
+        prefix='Albert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
         layers=('embeddings',) + tuple(f'encoder.albert_layer_groups.{i}' for i in range(num_layers))
@@ -1358,7 +1345,7 @@ for identifier, num_layers in [
     ('t5-11b', 24),
 ]:
     transformer_configurations.append(dict(
-        prefix='T5', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,
+        prefix='T5', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_t5.py#L773
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_t5.py#L605
         layers=('shared',) + tuple(f'encoder.block.{i}' for i in range(num_layers)),
@@ -1370,7 +1357,7 @@ for identifier, num_layers in [
     ('xlm-roberta-large', 24),
 ]:
     transformer_configurations.append(dict(
-        prefix='XLMRoberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,
+        prefix='XLMRoberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_xlm_roberta.py#L119
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
