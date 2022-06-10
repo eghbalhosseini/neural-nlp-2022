@@ -25,8 +25,8 @@ def get_args():
 
 def mock_get_args():
     mock_args = namedtuple('debug', ['checkpoint_dir', 'hf_save_dir'])
-    debug_args = mock_args('/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step3000/',
-                        '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step3000/'
+    debug_args = mock_args('/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/',
+                        '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/'
                           )
     return debug_args
 
