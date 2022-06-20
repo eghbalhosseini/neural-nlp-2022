@@ -177,7 +177,7 @@ def get_state_dict_from_checkpoint_dir(checkpoint_dir, config):
 
     return tgt_state_dict
 
-debug=True
+debug=False
 
 if __name__ == "__main__":
 
