@@ -1182,7 +1182,7 @@ for identifier, num_layers in [
     ('distilgpt2', 6),
 ]:
     transformer_configurations.append(dict(
-        prefix='GPT2', weight_identifier=identifier,weight_file=identifier,config_file=identifier, tokenizer_special_tokens=('ġ',),
+        prefix='GPT2', weight_identifier=identifier,weight_file=identifier,config_file=identifier, tokenizer_special_tokens=('ġ',),tokenizer_identifier='gpt2',
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
