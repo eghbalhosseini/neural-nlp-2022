@@ -1010,8 +1010,7 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
     if 'neuroid_id' in ceiling_neuroids.dims:
         assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
     elif 'neuroid' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid'].values) == set(ceiling_neuroids['neuroid'].values)
-        True
+        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
     ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
                                                      for neuroid_id in neuroids['neuroid_id'].values]}]  # align
     ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
