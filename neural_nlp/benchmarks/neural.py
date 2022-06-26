@@ -1007,10 +1007,18 @@ def aggregate_neuroid_scores(neuroid_scores, subject_column):
 
 
 def consistency_neuroids(neuroids, ceiling_neuroids):
-    if 'neuroid_id' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
-    elif 'neuroid' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
+    # if 'neuroid_id' in ceiling_neuroids.dims:
+    #     assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
+    # elif 'neuroid' in ceiling_neuroids.dims:
+    #     assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
+    # ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
+    #                                                  for neuroid_id in neuroids['neuroid_id'].values]}]  # align
+    # ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
+    # values = consistency(neuroids.values, ceiling_neuroids.values)
+    # neuroids = type(neuroids)(values, coords={coord: (dims, values) for coord, dims, values in walk_coords(neuroids)},
+    #                           dims=neuroids.dims)
+    # return neuroids
+    assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
     ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
                                                      for neuroid_id in neuroids['neuroid_id'].values]}]  # align
     ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
@@ -1018,7 +1026,6 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
     neuroids = type(neuroids)(values, coords={coord: (dims, values) for coord, dims, values in walk_coords(neuroids)},
                               dims=neuroids.dims)
     return neuroids
-
 
 def aggregate_ceiling(neuroid_scores, ceiling, subject_column='subject'):
     aggregate_raw = aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
