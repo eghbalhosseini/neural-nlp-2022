@@ -10,7 +10,6 @@ import torch
 import copy
 from tqdm import tqdm
 
-
 def permute_mat(mat):
     mat_flat = mat.flatten()
     assert(mat_flat.ndim==1)
@@ -21,7 +20,6 @@ def permute_mat(mat):
 
 def initialize_gpt_neox_weights(model,mu=0,sigma=0.02):
     model_perm = copy.deepcopy(model)
-    n_ctx = model_perm.config.n_ctx
     orig_states = model_perm.state_dict()
     perm_states = dict.fromkeys(orig_states.keys())
     for key in tqdm(orig_states.keys(), desc='permuting weights'):
