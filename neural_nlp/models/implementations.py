@@ -18,7 +18,7 @@ from tqdm import tqdm
 from brainscore.utils import LazyLoad
 from neural_nlp.models.wrapper.core import ActivationsExtractorHelper
 from neural_nlp.models.wrapper.pytorch import PytorchWrapper
-from neural_nlp.models.gpt_neox_model import GPTNeoXModel,GPTNeoXPosLearnedModel,GPTNeoXPosLearnedConfig,GPTNeoXConfig
+from neural_nlp.models.gpt_neox_model import GPTNeoXModel,GPTNeoXPosLearnedModel,GPTNeoXPosLearnedConfig,GPTNeoXConfig, initialize_gpt_neox_weights
 from transformers import AutoConfig, AutoModel, AutoModelWithLMHead,AutoTokenizer
 AutoConfig.register('gpt-neox',GPTNeoXConfig)
 AutoConfig.register('gpt-neox-pos-learned',GPTNeoXPosLearnedConfig)
@@ -1421,7 +1421,11 @@ for untrained in False, True:
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
                 model = model_ctr(config=config)
-                state_dict = model.state_dict()  # capture initial random weights and force load them later
+                if "GPTNeoXPosLearned" in configuration['config_ctr']:
+                    state_dict = initialize_gpt_neox_weights(model)
+                    print('initializing model manually\n')
+                else:
+                    state_dict = model.state_dict()  # capture initial random weights and force load them later
             else:
                 if configuration['prefix'] == 'gpt-neox-pos-learned':
                     config.output_hidden_states = True
