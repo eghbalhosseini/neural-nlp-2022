@@ -1,10 +1,58 @@
 import logging
 import sys
 from collections import OrderedDict
-
+import torch
+import copy
+from tqdm import tqdm
 import argparse
 from brainio.assemblies import merge_data_arrays
 from numpy.random.mtrand import RandomState
+
+def permute_mat(mat):
+    mat_flat = mat.flatten()
+    assert(mat_flat.ndim==1)
+    shuffle_idx = torch.randperm(mat_flat.shape[0])
+    mat_flat_rnd = mat_flat[shuffle_idx]
+    mat_perm = torch.reshape(mat_flat_rnd, mat.shape)
+    return mat_perm
+
+def initialize_gpt2_weights(model,mu=0,sigma=0.02):
+    model_perm = copy.deepcopy(model)
+    n_ctx = model_perm.config.n_ctx
+    orig_states = model_perm.state_dict()
+    perm_states = dict.fromkeys(orig_states.keys())
+    for key in tqdm(orig_states.keys(), desc='permuting weights'):
+        True
+        if 'attn.c_attn.weight' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = b
+        elif 'attn.c_attn.bias' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        elif 'attn.c_proj' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        # modify layer norm
+        elif 'ln' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        # modify feedforward layer
+        elif 'mlp' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        elif 'wte' in key or 'wpe' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(b)
+        else:
+            perm_states[key] = orig_states[key]
+    return perm_states
+
 
 from neural_nlp.models.implementations import model_pool, load_model, model_layers
 

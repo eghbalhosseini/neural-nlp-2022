@@ -19,6 +19,7 @@ from brainscore.utils import LazyLoad
 from neural_nlp.models.wrapper.core import ActivationsExtractorHelper
 from neural_nlp.models.wrapper.pytorch import PytorchWrapper
 from neural_nlp.models.gpt_neox_model import GPTNeoXModel,GPTNeoXPosLearnedModel,GPTNeoXPosLearnedConfig,GPTNeoXConfig, initialize_gpt_neox_weights
+from neural_nlp.models import initialize_gpt2_weights
 from transformers import AutoConfig, AutoModel, AutoModelWithLMHead,AutoTokenizer
 AutoConfig.register('gpt-neox',GPTNeoXConfig)
 AutoConfig.register('gpt-neox-pos-learned',GPTNeoXPosLearnedConfig)
@@ -1422,18 +1423,19 @@ for untrained in False, True:
                 # load standard model constructor: this will only create modules and initialize them for training
                 model = model_ctr(config=config)
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
-                    state_dict = initialize_gpt_neox_weights(model)
                     print('initializing model manually\n')
+                    state_dict = initialize_gpt_neox_weights(model)
+                elif "AutoConfig" in configuration['config_ctr']:
+                    print('initializing model manually\n')
+                    state_dict = initialize_gpt2_weights(model)
                 else:
                     state_dict = model.state_dict()  # capture initial random weights and force load them later
+            if configuration['prefix'] == 'gpt-neox-pos-learned':
+                config.output_hidden_states = True
+                model = model_ctr.from_pretrained(configuration['weight_file'], config=config,state_dict=state_dict)
             else:
-                if configuration['prefix'] == 'gpt-neox-pos-learned':
-                    config.output_hidden_states = True
-                    model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
-                                                      state_dict=state_dict)
-                else:
-                    model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,
-                                                      state_dict=state_dict)
+                model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,state_dict=state_dict)
+
             model_wrapper = configuration.get('model_wrapper', None)
             if model_wrapper:
                 model = model_wrapper(model)
