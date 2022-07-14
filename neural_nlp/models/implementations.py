@@ -1421,7 +1421,7 @@ for untrained in False, True:
             config.output_hidden_states = True
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
-                model = model_ctr(config=config)
+                model = model_ctr.from_config(config=config)
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     state_dict = initialize_gpt_neox_weights(model)
