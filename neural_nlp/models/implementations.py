@@ -1421,14 +1421,17 @@ for untrained in False, True:
             config.output_hidden_states = True
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
-                model = model_ctr.from_config(config=config)
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
                     print('initializing model manually\n')
+                    model = model_ctr(config=config)
                     state_dict = initialize_gpt_neox_weights(model)
                 elif "AutoConfig" in configuration['config_ctr']:
                     print('initializing model manually\n')
+                    model = model_ctr.from_config(config=config)
                     state_dict = initialize_gpt2_weights(model)
                 else:
+                    #model = model_ctr.from_config(config=config)
+                    model = model_ctr(config=config)
                     state_dict = model.state_dict()  # capture initial random weights and force load them later
             if configuration['prefix'] == 'gpt-neox-pos-learned':
                 config.output_hidden_states = True
