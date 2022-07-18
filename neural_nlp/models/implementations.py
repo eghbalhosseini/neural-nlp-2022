@@ -717,8 +717,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
             context_ids = token_ids[context_start:token_index + 1]
             tokens_tensor = torch.tensor([context_ids])
             tokens_tensor = tokens_tensor.to('cuda' if torch.cuda.is_available() else 'cpu')
-            overall_features, _, context_encoding = self._model(tokens_tensor)
-            #overall_features, context_encoding = self._model(tokens_tensor)
+            #overall_features, _, context_encoding = self._model(tokens_tensor)
+            overall_features, context_encoding,_ = self._model(tokens_tensor)
             if layer is None:
                 context_features = overall_features[:, -1, :]
             else:
@@ -1440,7 +1440,7 @@ for untrained in False, True:
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config,state_dict=state_dict)
             elif configuration['prefix']=='mistral':
                 print('initializing mistral manual\n')
-                #config.output_attentions=True
+                config.output_attentions=True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
             else:
                 model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,state_dict=state_dict)
