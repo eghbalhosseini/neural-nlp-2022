@@ -1249,7 +1249,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 # checkpoints from mistral training
 mistral_root_=[ '/om/user/ehoseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
-    ('mistral/caprica-gpt2-small-x81', 12),], list(np.arange(0,410000,10000))):
+    ('mistral/caprica-gpt2-small-x81', 12),], list(np.concatenate([np.asarray([40,400,4000]),np.arange(0,410000,10000)]))):
     transformer_configurations.append(dict(
         prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=f"{identifier}/ckpt_{ckpoint}", weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
         config_file=f"{mistral_root_[0]}/ckpt_{ckpoint}/config.json", tokenizer_identifier='gpt2',
