@@ -1441,6 +1441,7 @@ for untrained in False, True:
             elif configuration['prefix']=='mistral':
                 print('initializing mistral manual\n')
                 config.output_attentions=True
+                config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
             else:
                 model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,state_dict=state_dict)
