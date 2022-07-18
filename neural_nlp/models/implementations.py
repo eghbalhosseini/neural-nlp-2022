@@ -717,7 +717,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
             context_ids = token_ids[context_start:token_index + 1]
             tokens_tensor = torch.tensor([context_ids])
             tokens_tensor = tokens_tensor.to('cuda' if torch.cuda.is_available() else 'cpu')
-            overall_features, _, context_encoding = self._model(tokens_tensor)
+            #overall_features, _, context_encoding = self._model(tokens_tensor)
+            overall_features, context_encoding = self._model(tokens_tensor)
             if layer is None:
                 context_features = overall_features[:, -1, :]
             else:
