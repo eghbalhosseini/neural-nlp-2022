@@ -20,7 +20,8 @@ GPT2_PRETRAINED_MODEL_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config
 
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
-    benchmark_name = 'wikitext-2'
+    #benchmark_name = 'wikitext-2'
+    benchmark_name = "Blank2014fROI-encoding"
     model_name="distilgpt2"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
