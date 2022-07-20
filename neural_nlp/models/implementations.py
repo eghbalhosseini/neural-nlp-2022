@@ -721,7 +721,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
             #model_out=self._model(tokens_tensor)
             #overall_features=model_out[0]
             #context_encoding=model_out[2]
-            (overall_features,_, context_encoding) = self._model(tokens_tensor).to_tuple()
+            #(overall_features,_, context_encoding) = self._model(tokens_tensor).to_tuple()
+            (overall_features, context_encoding) = self._model(tokens_tensor).to_tuple()
             if layer is None:
                 context_features = overall_features[:, -1, :]
             else:
