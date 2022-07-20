@@ -1265,6 +1265,31 @@ for (identifier, num_layers), ckpoint in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
+mistral_root_=[ '/om/user/ehoseini/MyData/mistral/expanse-gpt2-small-x777']
+#mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
+for (identifier, num_layers), ckpoint in itertools.product([
+    ('expanse-gpt2-small-x777', 12),], list(np.asarray([0,40,400,4000,40000,400000]))):
+    identifier = f"{identifier}-ckpnt-{ckpoint}"
+    transformer_configurations.append(dict(
+        prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
+        config_file=f"{mistral_root_[0]}/ckpt_{ckpoint}/config.json", tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+mistral_root_=[ '/om/user/ehoseini/MyData/mistral/alias-gpt2-small-x21']
+#mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
+for (identifier, num_layers), ckpoint in itertools.product([
+    ('alias-gpt2-small-x21', 12),], list(np.asarray([0,40,400,4000,40000,400000]))):
+    identifier = f"{identifier}-ckpnt-{ckpoint}"
+    transformer_configurations.append(dict(
+        prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
+        config_file=f"{mistral_root_[0]}/ckpt_{ckpoint}/config.json", tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+
 # transformer xl
 transformer_configurations.append(dict(
     prefix='TransfoXL', weight_identifier='transfo-xl-wt103',
