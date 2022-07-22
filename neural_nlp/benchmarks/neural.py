@@ -1019,6 +1019,7 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
     #                           dims=neuroids.dims)
     # return neuroids
     print(ceiling_neuroids.coords.keys())
+    print(neuroids.coords.keys())
     #assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
     assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
     ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
