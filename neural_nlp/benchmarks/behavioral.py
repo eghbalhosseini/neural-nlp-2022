@@ -332,10 +332,12 @@ class Futrell2018SentencesEncoding(Futrell2018Encoding):
         return assembly
 
 
-benchmark_pool = [
-    ('Futrell2018-encoding', dict()),
-    ('Futrell2018-unique_encoding', dict(unique_split_values=True)),
+benchmark_pool_list = [
+    ('Futrell2018-encoding',Futrell2018Encoding, dict()),
+    ('Futrell2018-unique_encoding',Futrell2018Encoding, dict(unique_split_values=True)),
+    ('Futrell2018-stories_encoding',Futrell2018StoriesEncoding, dict()),
+    ('Futrell2018-sentences_encoding',Futrell2018SentencesEncoding, dict())
 ]
 benchmark_pool = {identifier: LazyLoad(
-    lambda identifier=identifier, kwargs=kwargs: Futrell2018Encoding(identifier=identifier, **kwargs))
-    for identifier, kwargs in benchmark_pool}
+    lambda identifier=identifier,ctr=ctr, kwargs=kwargs: ctr(identifier=identifier, **kwargs))
+    for identifier,ctr, kwargs in benchmark_pool_list}
