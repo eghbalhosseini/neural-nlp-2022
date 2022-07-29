@@ -20,7 +20,7 @@ def permute_mat(mat):
 def initialize_gpt2_weights(model,mu=0,sigma=0.02,permute=False):
     model_perm = copy.deepcopy(model)
     orig_states = model_perm.state_dict()
-    valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe']
+    valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe','lm_head']
     to_permute=np.sum([np.sum([valid_keys[n] in s for s in list(orig_states.keys())]) for n in range(len(valid_keys))])
     if permute:
         pbar=tqdm(total=to_permute,desc=f'permuting {to_permute} weights in {len(orig_states.keys())}')
@@ -56,6 +56,11 @@ def initialize_gpt2_weights(model,mu=0,sigma=0.02,permute=False):
             perm_states[key] = permute_mat(a) if permute else permute_mat(b)
             pbar.update()
         elif 'wte' in key or 'wpe' in key:
+            a = orig_states[key]
+            b = torch.normal(mu, sigma, size=a.shape)
+            perm_states[key] = permute_mat(a) if permute else permute_mat(b)
+            pbar.update()
+        elif 'lm_head' in key:
             a = orig_states[key]
             b = torch.normal(mu, sigma, size=a.shape)
             perm_states[key] = permute_mat(a) if permute else permute_mat(b)
