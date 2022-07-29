@@ -1407,17 +1407,25 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-for untrained in False, True:
+for condition in ['trained','untrained','permuted']:
+#for untrained in False, True:
     for configuration in transformer_configurations:
         configuration = copy.deepcopy(configuration)
         # either use the defined identifier or the weights used
         identifier = configuration.get('identifier', configuration['weight_identifier'])
         configuration['trained'] = True
+        configuration['permuted'] = False
         prefix = configuration.get('identifier', configuration['prefix'])
 
-        if untrained:
+        if condition == 'untrained':
             identifier += '-untrained'
             configuration['trained'] = False
+            configuration['permuted'] = False
+        if condition == 'permuted':
+            identifier += '-permuted'
+            configuration['trained'] = True
+            configuration['permuted'] = True
+
         if prefix == 'nyu-mll':
             configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
             configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelWithLMHead')
@@ -1457,11 +1465,12 @@ for untrained in False, True:
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr(config=config)
-                    state_dict = initialize_gpt_neox_weights(model)
+                    # either permute or do normal initialization
+                    state_dict = initialize_gpt_neox_weights(model,permute=False)
                 elif "AutoConfig" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr.from_config(config=config)
-                    state_dict = initialize_gpt2_weights(model)
+                    state_dict = initialize_gpt2_weights(model,permute=False)
                 else:
                     #model = model_ctr.from_config(config=config)
                     model = model_ctr(config=config)
@@ -1469,10 +1478,19 @@ for untrained in False, True:
             if configuration['prefix'] == 'gpt-neox-pos-learned':
                 config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config,state_dict=state_dict)
+                if configuration['permuted']:
+                    state_dict = initialize_gpt_neox_weights(model,permute=True)
+                    model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
+                                                      state_dict=state_dict)
+
             elif configuration['prefix']=='mistral':
                 print('initializing mistral manual\n')
                 config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
+                if configuration['permuted']:
+                    state_dict = initialize_gpt2_weights(model,permute=True)
+                    model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
+                                                      state_dict=state_dict)
             else:
                 model = model_ctr.from_pretrained(configuration['weight_file'], output_hidden_states=True,state_dict=state_dict)
 
