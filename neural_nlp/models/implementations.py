@@ -1484,7 +1484,7 @@ for condition in ['trained','untrained','permuted']:
                                                       state_dict=state_dict)
 
             elif configuration['prefix']=='mistral':
-                print('initializing mistral manual\n')
+
                 config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
                 if configuration['permuted']:
