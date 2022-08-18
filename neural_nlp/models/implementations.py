@@ -1305,7 +1305,8 @@ for identifier, num_layers in [
     ('nyu-mll/roberta-med-small-1M-3', 6)
 ]:
     transformer_configurations.append(dict(
-        prefix='nyu-mll', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=f"{nyu_root_[0]}/{identifier}",config_file=f"{nyu_root_[0]}/{identifier}/config.json",tokenizer_identifier='roberta',
+        prefix='nyu-mll', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=f"{nyu_root_[0]}/{identifier}",
+        config_file=f"{nyu_root_[0]}/{identifier}/config.json",tokenizer_identifier='roberta',
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
@@ -1352,7 +1353,6 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-# roberta_NYU
 
 # distilbert
 for identifier, num_layers in [
@@ -1508,6 +1508,16 @@ for condition in ['trained','untrained','permuted']:
                                                       state_dict=state_dict)
 
             elif configuration['prefix']=='mistral':
+
+                config.output_hidden_states = True
+                model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
+                if configuration['permuted']:
+                    state_dict = initialize_gpt2_weights(model,permute=True)
+                    model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
+                                                      state_dict=state_dict)
+
+
+            elif configuration['prefix']=='nyu-mll':
 
                 config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
