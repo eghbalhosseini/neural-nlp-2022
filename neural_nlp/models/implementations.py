@@ -1330,6 +1330,27 @@ for identifier, num_layers in [
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
+
+# roberta_NYU
+for identifier, num_layers in [
+    ('nyu-mll/roberta-base-1B-1', 12),
+    ('nyu-mll/roberta-base-1B-2', 12),
+    ('nyu-mll/roberta-base-1B-3', 12),
+    ('nyu-mll/roberta-base-100M-1', 12),
+    ('nyu-mll/roberta-base-100M-2', 12),
+    ('nyu-mll/roberta-base-100M-3', 12),
+    ('nyu-mll/roberta-base-10M-1', 12),
+    ('nyu-mll/roberta-base-10M-2', 12),
+    ('nyu-mll/roberta-base-10M-3', 12),
+    ('nyu-mll/roberta-med-small-1M-1', 6),
+    ('nyu-mll/roberta-med-small-1M-2', 6),
+    ('nyu-mll/roberta-med-small-1M-3', 6)
+]:
+    transformer_configurations.append(dict(
+        prefix='nyu-mll', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
+    ))
 # distilbert
 for identifier, num_layers in [
     ('distilbert-base-uncased', 6),
@@ -1428,7 +1449,7 @@ for condition in ['trained','untrained','permuted']:
 
         if prefix == 'nyu-mll':
             configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
-            configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelWithLMHead')
+            configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelForMaskedLM')
             configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', 'AutoTokenizer')
             configuration['module_ctr'] = 'transformers'
         elif prefix == 'stanford-crfm' or prefix == 'mistral':
