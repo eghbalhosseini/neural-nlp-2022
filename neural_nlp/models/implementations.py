@@ -1557,17 +1557,22 @@ for condition in ['trained','untrained','permuted','untrained-1','untrained-2','
                     model = model_ctr.from_config(config=config)
                     if configuration['untrained_type'] == 'untrained-1':
                         state_dict = initialize_gpt2_weights(model, permute=False,
-                                                             valid_keys=[ 'ln', 'mlp', 'wte', 'wpe','lm_head'])
+                                                             valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','mlp.c_fc','mlp.c_proj','wte','wpe','lm_head']) # remove ln shuffling
                     elif configuration['untrained_type'] == 'untrained-2':
                         state_dict = initialize_gpt2_weights(model, permute=False,
-                                                             valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
-                                                                         'attn.c_proj', 'mlp', 'wte', 'wpe',
-                                                                         'lm_head'])
+                                                             valid_keys=['attn.c_proj','ln','mlp.c_fc','mlp.c_proj','wte','wpe','lm_head']) # remove c_attn.weight
                     elif configuration['untrained_type'] == 'untrained-3':
                         state_dict = initialize_gpt2_weights(model, permute=False,
-                                                             valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
-                                                                         'attn.c_proj', 'ln', 'wte', 'wpe',
-                                                                         'lm_head'])
+                                                             valid_keys=['attn.c_attn.weight','attn.c_attn.bias','ln','mlp.c_fc','mlp.c_proj','wte','wpe','lm_head']) # remove attn.c_proj
+                    elif configuration['untrained_type'] == 'untrained-4':
+                        state_dict = initialize_gpt2_weights(model, permute=False,
+                                                             valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp.c_proj','wte','wpe','lm_head']) # remove mlp_c_fc
+                    elif configuration['untrained_type'] == 'untrained-5':
+                        state_dict = initialize_gpt2_weights(model, permute=False,
+                                                             valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp.c_fc','wte','wpe','lm_head']) # remove mlp c_proj
+                    elif configuration['untrained_type'] == 'untrained-6':
+                        state_dict = initialize_gpt2_weights(model, permute=False,
+                                                             valid_keys=[]) # remove all
                     elif configuration['untrained_type'] == 'untrained':
                         state_dict = initialize_gpt2_weights(model,permute=False)
 
