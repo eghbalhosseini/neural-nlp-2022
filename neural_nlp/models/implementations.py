@@ -1572,7 +1572,7 @@ for condition in ['trained','untrained','permuted','untrained-1','untrained-2','
                                                              valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp.c_fc','wte','wpe','lm_head']) # remove mlp c_proj
                     elif configuration['untrained_type'] == 'untrained-6':
                         state_dict = initialize_gpt2_weights(model, permute=False,
-                                                             valid_keys=[]) # remove all
+                                                             valid_keys=['None']) # remove all
                     elif configuration['untrained_type'] == 'untrained':
                         state_dict = initialize_gpt2_weights(model,permute=False)
 
