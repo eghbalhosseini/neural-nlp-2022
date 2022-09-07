@@ -1556,15 +1556,15 @@ for condition in ['trained','untrained','permuted','untrained-1','untrained-2','
                     print('initializing model manually\n')
                     model = model_ctr.from_config(config=config)
                     if configuration['untrained_type'] == 'untrained-1':
-                        state_dict = initialize_gpt2_weights(model, permute=True,
+                        state_dict = initialize_gpt2_weights(model, permute=False,
                                                              valid_keys=[ 'ln', 'mlp', 'wte', 'wpe','lm_head'])
                     elif configuration['untrained_type'] == 'untrained-2':
-                        state_dict = initialize_gpt2_weights(model, permute=True,
+                        state_dict = initialize_gpt2_weights(model, permute=False,
                                                              valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
                                                                          'attn.c_proj', 'mlp', 'wte', 'wpe',
                                                                          'lm_head'])
                     elif configuration['untrained_type'] == 'untrained-3':
-                        state_dict = initialize_gpt2_weights(model, permute=True,
+                        state_dict = initialize_gpt2_weights(model, permute=False,
                                                              valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
                                                                          'attn.c_proj', 'ln', 'wte', 'wpe',
                                                                          'lm_head'])
