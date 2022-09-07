@@ -1489,7 +1489,7 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-for condition in ['trained','untrained','permuted']:
+for condition in ['trained','untrained','permuted','untrained-1','untrained-2','untrained-3']:
 #for untrained in False, True:
     for configuration in transformer_configurations:
         configuration = copy.deepcopy(configuration)
@@ -1499,14 +1499,17 @@ for condition in ['trained','untrained','permuted']:
         configuration['permuted'] = False
         prefix = configuration.get('identifier', configuration['prefix'])
 
-        if condition == 'untrained':
-            identifier += '-untrained'
+        if 'untrained' in condition:
+            identifier += f'-{condition}'
             configuration['trained'] = False
             configuration['permuted'] = False
-        if condition == 'permuted':
-            identifier += '-permuted'
+            configuration['untrained_type'] = condition
+        #if condition == 'permuted':
+        if 'permuted' in condition:
+            identifier += f'-{condition}'
             configuration['trained'] = True
             configuration['permuted'] = True
+            configuration['permute_type'] = condition
 
         if prefix == 'nyu-mll':
             configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
@@ -1552,7 +1555,22 @@ for condition in ['trained','untrained','permuted']:
                 elif "AutoConfig" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr.from_config(config=config)
-                    state_dict = initialize_gpt2_weights(model,permute=False)
+                    if configuration['untrained_type'] == 'untrained-1':
+                        state_dict = initialize_gpt2_weights(model, permute=True,
+                                                             valid_keys=[ 'ln', 'mlp', 'wte', 'wpe','lm_head'])
+                    elif configuration['untrained_type'] == 'untrained-2':
+                        state_dict = initialize_gpt2_weights(model, permute=True,
+                                                             valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
+                                                                         'attn.c_proj', 'mlp', 'wte', 'wpe',
+                                                                         'lm_head'])
+                    elif configuration['untrained_type'] == 'untrained-3':
+                        state_dict = initialize_gpt2_weights(model, permute=True,
+                                                             valid_keys=['attn.c_attn.weight', 'attn.c_attn.bias',
+                                                                         'attn.c_proj', 'ln', 'wte', 'wpe',
+                                                                         'lm_head'])
+                    elif configuration['untrained_type'] == 'untrained':
+                        state_dict = initialize_gpt2_weights(model,permute=False)
+
                 else:
                     #model = model_ctr.from_config(config=config)
                     model = model_ctr(config=config)
@@ -1570,7 +1588,14 @@ for condition in ['trained','untrained','permuted']:
                 config.output_hidden_states = True
                 model = model_ctr.from_pretrained(configuration['weight_file'], config=config, state_dict=state_dict)
                 if configuration['permuted']:
-                    state_dict = initialize_gpt2_weights(model,permute=True)
+                    if configuration['permute_type'] == 'permuted-1':
+                        state_dict = initialize_gpt2_weights(model,permute=True,valid_keys=['attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe','lm_head'])
+                    elif configuration['permute_type'] == 'permuted-2':
+                        state_dict = initialize_gpt2_weights(model, permute=True,valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe','lm_head'])
+                    elif configuration['permute_type'] == 'permuted-3':
+                        state_dict = initialize_gpt2_weights(model, permute=True,valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe','lm_head'])
+                    elif configuration['permute_type'] == 'permuted':
+                        state_dict = initialize_gpt2_weights(model, permute=True,valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln','mlp','wte','wpe','lm_head'])
                     model = model_ctr.from_pretrained(configuration['weight_file'], config=config,
                                                       state_dict=state_dict)
 
