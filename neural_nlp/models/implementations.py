@@ -1489,7 +1489,7 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-for condition in ['trained','untrained','permuted','untrained-1','untrained-2','untrained-3']:
+for condition in ['trained','untrained','permuted','untrained-1','untrained-2','untrained-3','untrained-4','untrained-5','untrained-6']:
 #for untrained in False, True:
     for configuration in transformer_configurations:
         configuration = copy.deepcopy(configuration)
