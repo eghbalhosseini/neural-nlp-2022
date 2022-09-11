@@ -1548,13 +1548,14 @@ for condition in ['trained','untrained','untrained_hf','permuted','untrained-1',
             if not configuration.get('trained', True):  # if untrained
                 # load standard model constructor: this will only create modules and initialize them for training
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
-                    print('initializing model manually\n')
+
                     model = model_ctr(config=config)
                     if configuration['untrained_type']=='untrained_hf':
                         state_dict = model.state_dict()
-                    else:
-                    # either permute or do normal initialization
+                    elif configuration['untrained_type']=='untrained':
+                        print('initializing model manually\n')
                         state_dict = initialize_gpt_neox_weights(model,permute=False)
+
                 elif "AutoConfig" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr.from_config(config=config)
