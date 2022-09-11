@@ -1489,7 +1489,7 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-for condition in ['trained','untrained','permuted','untrained-1','untrained-2','untrained-3','untrained-4','untrained-5','untrained-6','untrained-7']:
+for condition in ['trained','untrained','untrained_hf','permuted','untrained-1','untrained-2','untrained-3','untrained-4','untrained-5','untrained-6','untrained-7']:
 #for untrained in False, True:
     for configuration in transformer_configurations:
         configuration = copy.deepcopy(configuration)
@@ -1550,8 +1550,11 @@ for condition in ['trained','untrained','permuted','untrained-1','untrained-2','
                 if "GPTNeoXPosLearned" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr(config=config)
+                    if configuration['untrained_type']=='untrained_hf':
+                        state_dict = model.state_dict()
+                    else:
                     # either permute or do normal initialization
-                    state_dict = initialize_gpt_neox_weights(model,permute=False)
+                        state_dict = initialize_gpt_neox_weights(model,permute=False)
                 elif "AutoConfig" in configuration['config_ctr']:
                     print('initializing model manually\n')
                     model = model_ctr.from_config(config=config)
@@ -1579,7 +1582,8 @@ for condition in ['trained','untrained','permuted','untrained-1','untrained-2','
 
                     elif configuration['untrained_type'] == 'untrained':
                         state_dict = initialize_gpt2_weights(model,permute=False)
-
+                    elif configuration['untrained_type'] == 'untrained_hf':
+                        state_dict = model.state_dict()
                 else:
                     #model = model_ctr.from_config(config=config)
                     model = model_ctr(config=config)
