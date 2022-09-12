@@ -1347,6 +1347,44 @@ for (identifier, num_layers), ckpoint in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
+
+bplm_root_=[ '/rdma/vast-rdma/vast/evlab/ehoseini/MyData/bplm/miniberta_10M/gpt2//gaussian_init_1/']
+#mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
+for (identifier, num_layers), ckpoint in itertools.product([
+    ('bplm-gpt2-gauss-init-1', 12),], list(np.arange(0,59000,500))):
+    identifier = f"{identifier}-ckpnt-{ckpoint}"
+    transformer_configurations.append(dict(
+        prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}",
+        config_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}/config.json", tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+bplm_root_=[ '/rdma/vast-rdma/vast/evlab/ehoseini/MyData/bplm/miniberta_10M/gpt2//gaussian_init/']
+#mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
+for (identifier, num_layers), ckpoint in itertools.product([
+    ('bplm-gpt2-gauss-init', 12),], list(np.arange(0,44000,250))):
+    identifier = f"{identifier}-ckpnt-{ckpoint}"
+    transformer_configurations.append(dict(
+        prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}",
+        config_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}/config.json", tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+bplm_root_=[ '/rdma/vast-rdma/vast/evlab/ehoseini/MyData/bplm/miniberta_10M/gpt2//hf_init/']
+#mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
+for (identifier, num_layers), ckpoint in itertools.product([
+    ('bplm-gpt2-hf-init', 12),], list(np.arange(0,44000,250))):
+    identifier = f"{identifier}-ckpnt-{ckpoint}"
+    transformer_configurations.append(dict(
+        prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}",
+        config_file=f"{bplm_root_[0]}/checkpoint_{ckpoint}/config.json", tokenizer_identifier='gpt2',
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
+        layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
+    ))
+
+
 nyu_root_=[ '/om/user/ehoseini/MyData/nyu-roberta/']
 for identifier, num_layers in [
     ('nyu-mll/roberta-base-1B-1', 12),
