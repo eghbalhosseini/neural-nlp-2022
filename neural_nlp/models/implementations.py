@@ -1618,6 +1618,19 @@ for condition in ['trained','untrained','untrained_hf','permuted','untrained-1',
                     elif configuration['untrained_type'] == 'untrained-7':
                         state_dict = initialize_gpt2_weights(model, permute=False,
                                                              valid_keys=['None'])  # remove all
+                    elif configuration['untrained_type'] == 'untrained-std-1':
+                        state_dict = initialize_gpt2_weights(model, permute=False,
+                                                             valid_keys=['None'],sigma=0.2)  # remove all
+                    elif configuration['untrained_type'] == 'untrained-std-2':
+                        state_dict = initialize_gpt2_weights(model, permute=False,
+                                                             valid_keys=['None'],sigma=2)  # remove all
+                    elif configuration['untrained_type'] == 'untrained-mu-1':
+                        state_dict = initialize_gpt2_weights(model, permute=False,mu=.5,
+                                                             valid_keys=['None'], sigma=0.2)  # remove all
+                    elif configuration['untrained_type'] == 'untrained-mu-2':
+                        state_dict = initialize_gpt2_weights(model, permute=False,mu=1,
+                                                             valid_keys=['None'], sigma=0.2)  # remove all
+
 
                     elif configuration['untrained_type'] == 'untrained':
                         state_dict = initialize_gpt2_weights(model,permute=False)
