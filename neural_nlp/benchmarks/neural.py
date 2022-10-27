@@ -746,8 +746,8 @@ class Fedorenko2016V3Encoding(Fedorenko2016Encoding):
     def load_assembly(self):
         return LazyLoad(lambda: load_Fedorenko2016(electrodes='language', version=3))
 
-    @property
-    @load_s3(key='Fedorenko2016v3-encoding-ceiling')
+    #@property
+    #@load_s3(key='Fedorenko2016v3-encoding-ceiling')
     def ceiling(self):
         return super(Fedorenko2016V3Encoding, self).ceiling
 
@@ -1018,10 +1018,10 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
     # neuroids = type(neuroids)(values, coords={coord: (dims, values) for coord, dims, values in walk_coords(neuroids)},
     #                           dims=neuroids.dims)
     # return neuroids
-    print(ceiling_neuroids.coords.keys())
-    print(neuroids.coords.keys())
-    assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
-    #assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
+    #print(ceiling_neuroids.coords.keys())
+    #print(neuroids.coords.keys())
+    #assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
+    assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
     ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
                                                      for neuroid_id in neuroids['neuroid_id'].values]}]  # align
     ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
