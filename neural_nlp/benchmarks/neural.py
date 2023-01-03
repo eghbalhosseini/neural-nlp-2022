@@ -19,7 +19,7 @@ from brainscore.metrics.regression import linear_regression, pearsonr_correlatio
 from brainscore.metrics.transformations import CartesianProduct, CrossValidation, apply_aggregate
 from brainscore.utils import LazyLoad
 from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling
-from neural_nlp.benchmarks.s3 import load_s3
+from neural_nlp.benchmarks.s3 import load_s3#, load_from_s3
 from neural_nlp.neural_data.ecog import load_Fedorenko2016
 from neural_nlp.neural_data.mgh_ecog import load_MghMockLang
 from neural_nlp.neural_data.fmri import load_voxels, load_rdm_sentences, \
@@ -28,6 +28,7 @@ from neural_nlp.stimuli import load_stimuli, StimulusSet
 from neural_nlp.utils import ordered_set
 from result_caching import store
 import xarray as xr
+import pandas as pd
 
 _logger = logging.getLogger(__name__)
 
@@ -534,6 +535,91 @@ class PereiraEncoding(_PereiraBenchmark):
     def ceiling(self):
         return super(PereiraEncoding, self).ceiling
 
+
+class _ANNSet1fMRIBenchmark(Benchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4
+    """
+
+    def __init__(self, identifier, metric):
+        self._identifier = identifier
+        self._target_assembly = LazyLoad(lambda: self._load_assembly())
+        self._single_metric = metric
+        #self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
+        self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    def _metric(self, source_assembly, target_assembly):
+        """ for ceiling compute """
+        cross_scores = self._cross(target_assembly, apply=
+        lambda cross_assembly: self._apply_cross(source_assembly, cross_assembly))
+        score = self._average_cross_scores(cross_scores)
+        return score
+
+    def _average_cross_scores(self, cross_scores):
+        return cross_scores.mean(['experiment', 'atlas'])
+
+    #@load_s3(key='Pereira2018')
+    def _load_assembly(self):
+        assembly = pd.read_pickle('/om2/user/ehoseini/MyData/brain-score-language/dataset/ANNSet1_fMRI-train-language_top_90.pkl')
+        return assembly
+
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = read_words(candidate, stimulus_set)
+        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
+
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        #score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        return score
+
+    def _apply_cross(self, source_assembly, cross_assembly):
+        cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
+        source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
+        assert len(cross_assembly['presentation']) in [243, 384]
+        assert not np.isnan(cross_assembly).any()
+        source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
+                                                            for stimulus_id in source_assembly['stimulus_id'].values]}]
+        return self._single_metric(source_assembly, cross_assembly)
+
+    @property
+    def ceiling(self):
+        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+
+class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
+    """
+    data source:
+
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(ANNSet1fMRIEncoding, self).__init__(metric=metric, **kwargs)
+
+    @property
+    def ceiling(self):
+        ceiling_val=pd.read_pickle('/om2/user/ehoseini/MyData/brain-score-language/dataset/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        return ceiling_val 
 
 class _PereiraSubjectWise(_PereiraBenchmark):
     def __init__(self, **kwargs):
@@ -1046,6 +1132,7 @@ def consistency(score, ceiling):
 benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
+    ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
     ('MghMockLang-encoding', MghMockLangEncoding),

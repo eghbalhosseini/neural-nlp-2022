@@ -16,14 +16,15 @@ if user=='eghbalhosseini':
 elif user=='ehoseini':
     model_and_config_dir = '/om2/user/ehoseini/MyData/neural_nlp_bench/'
 
-GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'CONFIG_ARCHIVE_MAP','distilgpt2-config.json')}
-GPT2_PRETRAINED_MODEL_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'MODEL_ARCHIVE_MAP','distilgpt2-pytorch_model.bin')}
+#GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'CONFIG_ARCHIVE_MAP','distilgpt2-config.json')}
+#GPT2_PRETRAINED_MODEL_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'MODEL_ARCHIVE_MAP','distilgpt2-pytorch_model.bin')}
 
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name = 'wikitext-2'
-    benchmark_name = "Blank2014fROI-encoding"
-    model_name="mistral-caprica-gpt2-small-x81-ckpnt-400"
+    #benchmark_name = "Blank2014fROI-encoding"
+    benchmark_name = "ANNSet1fMRI-encoding"
+    model_name="distilgpt2"
     #model_name="distilgpt2"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
@@ -31,7 +32,7 @@ if __name__ =='__main__':
     all_model_names=[x['weight_identifier'] for x in transformer_configurations]
     all_model_names.index(model_name)
     model_configs=transformer_configurations[all_model_names.index(model_name)]
-
+    model_identifier=model_name
     my_env = os.environ.copy()
     config = AutoConfig.from_pretrained(model_configs['config_file'])
     config.output_hidden_states = True

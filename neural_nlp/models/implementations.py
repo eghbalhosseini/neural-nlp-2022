@@ -884,6 +884,7 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
 
                 # Predict hidden states features for each layer
                 with torch.no_grad():
+                    # output is ['last_hidden_state', 'past_key_values', 'hidden_states'] so [-1:] is the hidden_states
                     context_encoding, = self.model(tokens_tensor).to_tuple()[-1:]
                 # We have a hidden state for all the layers
                 print(f" context length :{len(context_encoding)} vs layer length {len(self.layer_names)}\n")
