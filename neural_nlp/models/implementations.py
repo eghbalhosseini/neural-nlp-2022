@@ -1447,7 +1447,7 @@ for identifier, num_layers in [
     ('distilroberta-base', 6),
 ]:
     transformer_configurations.append(dict(
-        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='Roberta'
+        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='Roberta',
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
