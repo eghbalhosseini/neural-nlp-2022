@@ -1170,11 +1170,13 @@ for identifier, num_layers in [
     ('bert-large-uncased-whole-word-masking', 24),
 ]:
     transformer_configurations.append(dict(
-        prefix='Bert', weight_identifier=identifier,
+        prefix='Bert', weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='bert',
         # https://github.com/huggingface/pytorch-pretrained-BERT/blob/78462aad6113d50063d8251e27dbaadb7f44fbf0/pytorch_pretrained_bert/modeling.py#L480
         # output == layer_norm(fc(attn) + attn)
         layers=('embedding',) + tuple(f'encoder.layer.{i}.output' for i in range(num_layers))
     ))
+
+
 # openaigpt
 transformer_configurations.append(dict(
     prefix='OpenAIGPT', identifier='openaigpt', weight_identifier='openai-gpt', tokenizer_special_tokens=('</w>',),
@@ -1421,7 +1423,7 @@ for identifier, num_layers in [
     ('xlnet-large-cased', 24),
 ]:
     transformer_configurations.append(dict(
-        prefix='XLNet', tokenizer_special_tokens=(SPIECE_UNDERLINE,), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
+        prefix='XLNet', tokenizer_special_tokens=(SPIECE_UNDERLINE,), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='XLNet',
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_xlnet.py#L962
         layers=('drop',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
@@ -1434,7 +1436,7 @@ for identifier, num_layers in [
     ('xlm-mlm-100-1280', 16),
 ]:
     transformer_configurations.append(dict(
-        prefix='XLM', tokenizer_special_tokens=('</w>',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
+        prefix='XLM', tokenizer_special_tokens=('</w>',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='XLM',
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_xlm.py#L638
         layers=('dropout',) + tuple(f'encoder.layer_norm2.{i}' for i in range(num_layers))
     ))
@@ -1445,7 +1447,7 @@ for identifier, num_layers in [
     ('distilroberta-base', 6),
 ]:
     transformer_configurations.append(dict(
-        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
+        prefix='Roberta', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='Roberta'
         # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_roberta.py#L174
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
@@ -1477,7 +1479,7 @@ for (identifier, num_layers), version in itertools.product([
 ], [1, 2]):
     identifier = f"{identifier}-v{version}"
     transformer_configurations.append(dict(
-        prefix='Albert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,
+        prefix='Albert', tokenizer_special_tokens=('ġ',), weight_identifier=identifier,weight_file=identifier,config_file=identifier,tokenizer_identifier='Albert',
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L557
         # https://github.com/huggingface/transformers/blob/80faf22b4ac194061a08fde09ad8b202118c151e/src/transformers/modeling_albert.py#L335
         layers=('embeddings',) + tuple(f'encoder.albert_layer_groups.{i}' for i in range(num_layers))
