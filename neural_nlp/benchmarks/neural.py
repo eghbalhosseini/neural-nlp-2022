@@ -29,6 +29,7 @@ from neural_nlp.utils import ordered_set
 from result_caching import store
 import xarray as xr
 import getpass
+import pandas as pd 
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
 
