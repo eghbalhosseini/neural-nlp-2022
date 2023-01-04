@@ -29,6 +29,15 @@ from neural_nlp.utils import ordered_set
 from result_caching import store
 import xarray as xr
 import pandas as pd
+import getpass
+
+if getpass.getuser()=='eghbalhosseini':
+    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    
+elif getpass.getuser()=='ehoseini':
+    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    
+
 
 _logger = logging.getLogger(__name__)
 
@@ -545,15 +554,41 @@ class _ANNSet1fMRIBenchmark(Benchmark):
 
     def __init__(self, identifier, metric):
         self._identifier = identifier
-        self._target_assembly = LazyLoad(lambda: self._load_assembly())
+        self._target_assembly = self._load_assembly()
         self._single_metric = metric
         #self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
-
+    
     @property
     def identifier(self):
         return self._identifier
+    def _read_words(self,candidate,stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1,:]
+            #for column in copy_columns:
+            #    sentence_activations[column] = ('presentation', part_stimuli[column])
+            activations.append(sentence_activations)
 
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id)  for stimulus_id in
+               [int(s['stimulus_id'].values) for s in activations]]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
     def _metric(self, source_assembly, target_assembly):
         """ for ceiling compute """
         cross_scores = self._cross(target_assembly, apply=
@@ -566,12 +601,13 @@ class _ANNSet1fMRIBenchmark(Benchmark):
 
     #@load_s3(key='Pereira2018')
     def _load_assembly(self):
-        assembly = pd.read_pickle('/om2/user/ehoseini/MyData/brain-score-language/dataset/ANNSet1_fMRI-train-language_top_90.pkl')
+        assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
         return assembly
 
     def __call__(self, candidate):
-        stimulus_set = self._target_assembly.attrs['stimulus_set']
-        model_activations = read_words(candidate, stimulus_set)
+        stimulus_set = self._target_assembly['stimulus']
+        stimulus_set=stimulus_set.assign_coords({'sentence_id':('presentation',stimulus_set.stimulus_id.values)})
+        model_activations = self._read_words(candidate, stimulus_set,copy_columns=['stimulus_id'])
         assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
 
         _logger.info('Scoring across experiments & atlases')
@@ -586,13 +622,13 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         # normalize the neuroid aggregate by the overall ceiling aggregate.
         # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
         language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
-        #score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        score = self._aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
         return score
 
     def _apply_cross(self, source_assembly, cross_assembly):
         cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
         source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
-        assert len(cross_assembly['presentation']) in [243, 384]
+        assert len(cross_assembly['presentation']) in [200]
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
@@ -601,6 +637,28 @@ class _ANNSet1fMRIBenchmark(Benchmark):
     @property
     def ceiling(self):
         return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    def _aggregate_ceiling(self,neuroid_scores, ceiling, subject_column='subject'):
+        aggregate_raw = self._aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+        score = consistency(aggregate_raw, ceiling)
+        score.attrs['raw'] = aggregate_raw
+        score.attrs['ceiling'] = ceiling
+        score.attrs['description'] = "ceiling-normalized score"
+        return score
+    
+    def _aggregate_neuroid_scores(self,neuroid_scores, subject_column):
+        subject_scores = neuroid_scores.groupby(subject_column).median()
+        center = subject_scores.median(subject_column).values
+        subject_values = np.nan_to_num(subject_scores.values,
+                                       nan=0)  # mad cannot deal with all-nan in one axis, treat as 0
+        subject_axis = subject_scores.dims.index(subject_scores[subject_column].dims[0])
+        error = median_absolute_deviation(subject_values, axis=subject_axis)
+        # score = Score([center, error], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score = Score([float(center), float(error)], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score.attrs['raw'] = neuroid_scores
+        score.attrs['description'] = "score aggregated by taking median of neuroids per subject, " \
+                                     "then median of subject scores"
+        return score
 
 
 class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
@@ -618,7 +676,7 @@ class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
 
     @property
     def ceiling(self):
-        ceiling_val=pd.read_pickle('/om2/user/ehoseini/MyData/brain-score-language/dataset/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
         return ceiling_val 
 
 class _PereiraSubjectWise(_PereiraBenchmark):
