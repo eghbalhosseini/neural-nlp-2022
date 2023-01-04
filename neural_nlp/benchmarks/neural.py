@@ -574,7 +574,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
             # stimulus_ids = part_stimuli['stimulus_id']
             sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
                                             reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
+            sentence_stimuli.name = f"{self._target_assembly.identifier}-{reset_id}"
             sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1,:]
             #for column in copy_columns:
             #    sentence_activations[column] = ('presentation', part_stimuli[column])
@@ -606,6 +606,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
 
     def __call__(self, candidate):
         stimulus_set = self._target_assembly['stimulus']
+        
         stimulus_set=stimulus_set.assign_coords({'sentence_id':('presentation',stimulus_set.stimulus_id.values)})
         model_activations = self._read_words(candidate, stimulus_set,copy_columns=['stimulus_id'])
         assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)

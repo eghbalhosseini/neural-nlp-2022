@@ -887,7 +887,7 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
                     # output is ['last_hidden_state', 'past_key_values', 'hidden_states'] so [-1:] is the hidden_states
                     context_encoding, = self.model(tokens_tensor).to_tuple()[-1:]
                 # We have a hidden state for all the layers
-                print(f" context length :{len(context_encoding)} vs layer length {len(self.layer_names)}\n")
+                #print(f" context length :{len(context_encoding)} vs layer length {len(self.layer_names)}\n")
                 assert len(context_encoding) == len(self.layer_names)
                 # take only the encoding of the current word index
                 word_encoding = [encoding[:, -1:, :] for encoding in context_encoding]
