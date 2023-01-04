@@ -8,6 +8,7 @@ import xarray as xr
 from botocore import UNSIGNED
 from botocore.config import Config
 from tqdm import tqdm
+from brainio.fetch import fetch_file
 
 from neural_nlp.stimuli import StimulusSet
 from result_caching import _Storage
@@ -75,3 +76,16 @@ class _S3Storage(_Storage):
 
 
 load_s3 = _S3Storage
+
+
+# def load_from_s3(identifier, version_id, sha1, assembly_prefix="assy_", cls=NeuroidAssembly) -> DataAssembly:
+#     filename = f"{assembly_prefix}{identifier.replace('.', '_')}.nc"
+#     file_path = fetch_file(location_type="S3",
+#                            location=f"https://brainscore-language.s3.amazonaws.com/{filename}",
+#                            version_id=version_id,
+#                            sha1=sha1)
+#     loader = AssemblyLoader(cls=cls, file_path=file_path)
+#     assembly = loader.load()
+#     assembly.attrs['identifier'] = identifier
+#     return assembly
+
