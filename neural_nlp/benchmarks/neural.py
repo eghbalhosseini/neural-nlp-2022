@@ -29,7 +29,9 @@ from neural_nlp.utils import ordered_set
 from result_caching import store
 import xarray as xr
 import getpass
-import pandas as pd 
+import pandas as pd
+import pickle, pathlib 
+from brainio.assemblies import NeuroidAssembly
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
 
@@ -632,9 +634,10 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         https://www.nature.com/articles/s41467-018-03068-4
     """
 
-    def __init__(self, identifier, metric):
+    def __init__(self, identifier, metric,version='base'):
         self._identifier = identifier
-        self._target_assembly = self._load_assembly()
+        assembly = self._load_assembly(version=version)
+        self._target_assembly = assembly
         self._single_metric = metric
         # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
@@ -682,9 +685,13 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         return cross_scores.mean(['experiment', 'atlas'])
 
     # @load_s3(key='Pereira2018')
-    def _load_assembly(self):
-        assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+    def _load_assembly(self,version):
+        if version=='base':
+            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+        elif version=='wordForm':
+            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
         return assembly
+
 
     def __call__(self, candidate):
         stimulus_set = self._target_assembly['stimulus']
@@ -755,9 +762,76 @@ class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(ANNSet1fMRIEncoding, self).__init__(metric=metric, **kwargs)
 
+
     @property
     def ceiling(self):
         ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        return ceiling_val
+
+
+class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+
+        super(ANNSet1fMRIEncoding_V2, self).__init__(metric=metric,version='wordForm', **kwargs)
+
+        def _load_assembly(self):
+            # read UD data and replace stimuli
+            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+            UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
+            sentence_texts=[]
+            for stim_id,stim in UD_data.groupby('stimulus_id'):
+                sentence_texts.append(np.unique(stim.text.values)[0])
+            sentence_index=[sentence_texts.index(x) for x in assembly.stimulus.values]
+            assert(len(sentence_index)==200)
+            selected_stim=[]
+            for sent_id in sentence_index:
+                location=(UD_data.stimulus_id==sent_id).values
+                selected_stim.append(UD_data.sel(index=location))
+            
+            assert all([np.unique(x.text)[0]==assembly.stimulus.values[idx] for idx, x in enumerate(selected_stim)])
+            stimulus_form=[' '.join(x.word_FORM.values) for x in selected_stim]
+
+            new_assembly = NeuroidAssembly(assembly.values, coords={
+                'experiment': ('presentation', assembly.experiment.values),
+                'stimulus_num': ('presentation', assembly.stimulus_num.values),
+                'stimulus_id': ('presentation', assembly.stimulus_id.values),
+                'sentence': ('presentation', stimulus_form),
+                'stimulus': ('presentation', stimulus_form),
+                'list_id': ('presentation', assembly.list_id.values),
+                'stim_type': ('presentation', assembly.stim_type.values),
+                'stim_name': ('presentation', assembly.stim_name.values),
+                'Trial_id': ('presentation', assembly.Trial_id.values),
+                'TR_onset': ('presentation', assembly.TR_onset.values),
+                'TR_recorded': ('presentation', assembly.TR_recorded.values),
+                'TR_duration': ('presentation', assembly.TR_duration.values),
+                'subject': ('neuroid', assembly.subject.values),
+                'neuroid_id': ('neuroid', assembly.neuroid_id.values),
+                'voxel_num': ('neuroid', assembly.voxel_num.values),
+                'repetition_corr_ratio': ('neuroid', assembly.repetition_corr_ratio.values),
+                'repetition_corr': ('neuroid', assembly.repetition_corr.values),
+                'roi': ('neuroid', assembly.roi.values),
+                'atlas': ('neuroid',assembly.atlas.values)
+            }, dims=['presentation', 'neuroid'])
+            new_assembly = new_assembly.sortby('stimulus_id')
+            
+            new_assembly.attrs['identifier']=assembly.identifier+'_wordForm'
+            name=new_assembly.identifier.replace('.','-')
+            with open(Path(f'{ANNfMRI_PARENT}/{name}.pkl').__str__(),'wb') as f: 
+                pickle.dump(new_assembly,f)
+
+            return new_assembly
+    @property
+    def ceiling(self):
+        ceiling_val = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
         return ceiling_val
 class _Fedorenko2016:
     """
@@ -1179,6 +1253,7 @@ benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
     ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
+    ('ANNSet1fMRI-wordForm-encoding',ANNSet1fMRIEncoding_V2),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
     ('MghMockLang-encoding', MghMockLangEncoding),
