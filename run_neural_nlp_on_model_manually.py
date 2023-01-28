@@ -25,8 +25,8 @@ if __name__ =='__main__':
     #benchmark_name = "Blank2014fROI-encoding"
     #benchmark_name = "ANNSet1ECoG-encoding"
     #benchmark_name ="Fedorenko2016v3-encoding"
-    benchmark_name = 'LangLocECoG-encoding'
-    model_name="gpt2-large"
+    benchmark_name = 'LangLocECoGv2-encoding'
+    model_name="distilgpt2"
     #model_name="gpt2-medium"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]

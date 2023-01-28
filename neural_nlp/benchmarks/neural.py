@@ -1311,9 +1311,9 @@ class _LanglocECOG:
     data source:
     """
 
-    def __init__(self, identifier, metric,version='HighGamma_bipolar_gauss_zscore'):
+    def __init__(self, identifier, metric,version='HighGamma_bipolar_gauss_zscore',type='language',threshold=0.05):
         self._identifier = identifier
-        assembly = self._load_assembly(version=version)
+        assembly = self._load_assembly(version=version,type=type,threshold=threshold)
         self._target_assembly = assembly
         self._metric = metric
         self._average_sentence = False
@@ -1337,7 +1337,7 @@ class _LanglocECOG:
         score = ceil_neuroids(raw_neuroids, self.ceiling, subject_column='subject')
         return score
 
-    def _load_assembly(self,version):
+    def _load_assembly(self,version,type,threshold):
         file_id=Path(ANNfMRI_PARENT,f'LangLoc_ECoG.{version}_subs_17.pkl')
         assembly_raw = pd.read_pickle(file_id.__str__())
         # get only S from stim_type in assembly_raw
@@ -1352,14 +1352,19 @@ class _LanglocECOG:
         assembly = assembly.assign_coords(sentence_id=assembly.stimulus_id)
         # define a new coordiante stimuli_id that goes from 0 to size presentation dimension 
         assembly = assembly.assign_coords({'stimuli_id': ('presentation', np.arange(assembly.stimulus_id.size))})
-        # select electrdoes that are are s_v_n ==1 and are in electrode_valid
-        assembly = assembly[{'neuroid': (assembly['s_v_n'] == 1) & (assembly['electrode_valid'] == 1)}]
+        # select electrdoes that are are s_v_n_ratio and are in electrode_valid
+        if type=='language':
+            s_v_n=assembly.s_v_n_ratio>=(1-threshold)
+        elif type=='non-language':
+            s_v_n=assembly.s_v_n_ratio<(1-threshold)
+        assembly = assembly[{'neuroid': (s_v_n) & (assembly['electrode_valid'] == 1)}]
         # count number of electrodes with s_v_n_ratio > 0.99
         # print(f"Number of electrodes with s_v_n_ratio > 0.99: {np.sum(assembly['s_v_n_ratio'] > 0.99)}")
         # make a neural assembly from xarray assembly
         assembly = NeuroidAssembly(assembly)
         # add identifier to assembly
-        assembly.attrs['identifier'] = f"LangLoc_ECoG.{version}"
+        thr_str=str(threshold).replace('.','')
+        assembly.attrs['identifier'] = f"LangLoc_ECoG.{version}_{type}_thr_{thr_str}"
         return assembly
 
     def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
@@ -1476,10 +1481,22 @@ class LangLocECoGEncoding(_LanglocECOG):
                                            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimuli_id',
                                                                        stratification_coord='stimulus_id'))
 
-        super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric)
+        super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
 
     def ceiling(self):
         return super(_LanglocECOG, self).ceiling
+
+
+class LangLocECoGV2Encoding(_LanglocECOG):
+        def __init__(self,identifier,**kwargs):
+            regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
+            correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+            metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                               crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                                                           split_coord='stimuli_id',
+                                                                           stratification_coord='stimulus_id'))
+            super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
+                                                      version='HighGamma_bipolar_gauss_zscore', threshold=0.01)
 
 
 def aggregate(score, combine_layers=True):
@@ -1559,6 +1576,7 @@ benchmark_pool = [
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
     ('LangLocECoG-encoding', LangLocECoGEncoding),
+    ('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
     #('MghMockLang-encoding', MghMockLangEncoding),
