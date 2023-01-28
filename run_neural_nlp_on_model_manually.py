@@ -1,5 +1,5 @@
 import argparse
-from neural_nlp.models.implementations import _PytorchTransformerWrapper, word_last, transformer_configurations
+from neural_nlp.models.implementations import _PytorchTransformerWrapper, word_last, transformer_configurations,model_pool
 from neural_nlp import score as score_function
 import os
 import numpy as np
@@ -23,9 +23,11 @@ if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
-    benchmark_name = "ANNSet1fMRI-wordForm-encoding"
-    model_name="distilgpt2"
-    #model_name="distilgpt2"
+    #benchmark_name = "ANNSet1ECoG-encoding"
+    #benchmark_name ="Fedorenko2016v3-encoding"
+    benchmark_name = 'LangLocECoG-encoding'
+    model_name="gpt2-large"
+    #model_name="gpt2-medium"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name
@@ -62,6 +64,10 @@ if __name__ =='__main__':
 
     #score_results=score_function(benchmark=benchmark_tsk, model=model_identifier, model_impl=transformer,
     #                  layers=list(brainscore_config['layers']))
-
+    benchmark=benchmark_tsk
+    model_impl=transformer
+    layers=list(model_configs['layers'])
     score_results=score_function(benchmark=benchmark_tsk, model=model_identifier, model_impl=transformer,
                    layers=list(model_configs['layers']))
+
+    print(score_results)
