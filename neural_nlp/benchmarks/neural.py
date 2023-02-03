@@ -2,7 +2,7 @@
 Neural benchmarks to probe match of model internals against human internals.
 """
 import warnings
-
+from collections import defaultdict
 import itertools
 import logging
 import numpy as np
@@ -18,7 +18,7 @@ from brainscore.metrics.cka import CKACrossValidated
 from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
 from brainscore.metrics.transformations import CartesianProduct, CrossValidation, apply_aggregate
 from brainscore.utils import LazyLoad
-from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling
+from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling, v,ci_error,manual_merge,_coords_match
 from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.ecog import load_Fedorenko2016
 from neural_nlp.neural_data.mgh_ecog import load_MghMockLang
@@ -30,7 +30,7 @@ from result_caching import store
 import xarray as xr
 import getpass
 import pandas as pd
-import pickle, pathlib 
+import pickle, pathlib
 from pathlib import Path
 from brainio.assemblies import NeuroidAssembly
 if getpass.getuser() == 'eghbalhosseini':
@@ -41,7 +41,7 @@ elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
 
-    
+
 
 _logger = logging.getLogger(__name__)
 
@@ -698,7 +698,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
 
     def __call__(self, candidate):
         stimulus_set = self._target_assembly['stimulus']
-        
+
         stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
         stimulus_set.word_id
         model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimuls_id')
@@ -800,7 +800,7 @@ class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
             for sent_id in sentence_index:
                 location=(UD_data.stimulus_id==sent_id).values
                 selected_stim.append(UD_data.sel(index=location))
-            
+
             assert all([np.unique(x.text)[0]==assembly.stimulus.values[idx] for idx, x in enumerate(selected_stim)])
             stimulus_form=[' '.join(x.word_FORM.values) for x in selected_stim]
 
@@ -826,10 +826,10 @@ class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
                 'atlas': ('neuroid',assembly.atlas.values)
             }, dims=['presentation', 'neuroid'])
             new_assembly = new_assembly.sortby('stimulus_id')
-            
+
             new_assembly.attrs['identifier']=assembly.identifier+'_wordForm'
             name=new_assembly.identifier.replace('.','-')
-            with open(Path(f'{ANNfMRI_PARENT}/{name}.pkl').__str__(),'wb') as f: 
+            with open(Path(f'{ANNfMRI_PARENT}/{name}.pkl').__str__(),'wb') as f:
                 pickle.dump(new_assembly,f)
 
             return new_assembly
@@ -837,11 +837,11 @@ class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
     def ceiling(self):
         ceiling_val = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
         return ceiling_val
-    
+
 class _ANNSet1fMRISentenceBenchmark(Benchmark):
     """
     data source:
-        
+
     """
 
     def __init__(self, identifier, metric,version='base'):
@@ -1235,13 +1235,13 @@ class _ANNSet1ECoGBenchmark:
         assembly = assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
         # define a new coordinate called sentence_id with the same values as stimulus_id
         assembly = assembly.assign_coords(sentence_id=assembly.stimulus_id)
-        # define a new coordiante stimuli_id that goes from 0 to size presentation dimension 
+        # define a new coordiante stimuli_id that goes from 0 to size presentation dimension
         assembly = assembly.assign_coords({'stimuli_id':('presentation',np.arange(assembly.stimulus_id.size))})
         # select electrodes that have an roi=='language'
         assembly = assembly.sel(neuroid=assembly.roi=='language')
 
         return assembly
-    
+
     def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
         """
         Pass a `stimulus_set` through a model `candidate`.
@@ -1258,7 +1258,7 @@ class _ANNSet1ECoGBenchmark:
             sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
             for column in copy_columns:
                 sentence_activations[column] = ('presentation', part_stimuli[column])
-            
+
             activations.append(sentence_activations)
 
         # model_activations = merge_data_arrays(activations)
@@ -1282,11 +1282,11 @@ class _ANNSet1ECoGBenchmark:
         # make sure the model_activations and target_assembly have the same number of words
         assert np.all(model_activations['word_id'].values == target_assembly['word_id'].values)
         assert np.all(model_activations['stimuli_id'].values == target_assembly['stimuli_id'].values)
-        
+
         _logger.info('Scoring across electrodes')
         score = self.apply_metric(model_activations, self._target_assembly)
         return score
-    
+
     def _apply_cross(self, source_assembly, cross_assembly):
         cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
         source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
@@ -1303,21 +1303,22 @@ class ANNSet1ECoGEncoding(_ANNSet1ECoGBenchmark):
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
                                            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimuli_id',
                                                                        stratification_coord='stimulus_id'))
-    
+
         super(ANNSet1ECoGEncoding, self).__init__(identifier=identifier, metric=metric)
-        
+
 class _LanglocECOG:
     """
     data source:
     """
 
-    def __init__(self, identifier, metric,version='HighGamma_bipolar_gauss_zscore',type='language',threshold=0.05):
+    def __init__(self, identifier, metric,version='HighGamma_bipolar_gauss_zscore_subs_17',type='language',threshold=0.05):
         self._identifier = identifier
         assembly = self._load_assembly(version=version,type=type,threshold=threshold)
         self._target_assembly = assembly
         self._metric = metric
         self._average_sentence = False
         self._ceiler = ExtrapolationCeiling(subject_column='subject')
+        self._few_sub_ceiler=self.FewSubjectExtrapolation(subject_column='subject')
         self._electrode_ceiler = self.ElectrodeExtrapolation(subject_column='subject')
 
     @property
@@ -1330,7 +1331,8 @@ class _LanglocECOG:
 
     @property
     def ceiling(self):
-        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+        #return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+        return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
 
     def ceiling_normalize(self, score):
         raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
@@ -1338,11 +1340,11 @@ class _LanglocECOG:
         return score
 
     def _load_assembly(self,version,type,threshold):
-        file_id=Path(ANNfMRI_PARENT,f'LangLoc_ECoG.{version}_subs_17.pkl')
+        file_id=Path(ANNfMRI_PARENT,f'LangLoc_ECoG.{version}.pkl')
         assembly_raw = pd.read_pickle(file_id.__str__())
         # get only S from stim_type in assembly_raw
         assembly = assembly_raw[{'presentation': assembly_raw['stim_type'] == 'S'}]
-        # make sure stim_id is sorted 
+        # make sure stim_id is sorted
         # rename stim_id as stimulus_id in assembly
         assembly = assembly.rename({'stim_id': 'stimulus_id'})
         # this is to make sure that the assembly is ordered based on stimulus_id
@@ -1350,7 +1352,7 @@ class _LanglocECOG:
         assembly = assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
         # define a new coordinate called sentence_id with the same values as stimulus_id
         assembly = assembly.assign_coords(sentence_id=assembly.stimulus_id)
-        # define a new coordiante stimuli_id that goes from 0 to size presentation dimension 
+        # define a new coordiante stimuli_id that goes from 0 to size presentation dimension
         assembly = assembly.assign_coords({'stimuli_id': ('presentation', np.arange(assembly.stimulus_id.size))})
         # select electrdoes that are are s_v_n_ratio and are in electrode_valid
         if type=='language':
@@ -1472,6 +1474,154 @@ class _LanglocECOG:
             choices = [self._rng.choice(electrodes, size=num_electrodes, replace=False) for _ in range(num_choices)]
             return choices
 
+    class FewSubjectExtrapolation(ExtrapolationCeiling):
+        def __init__(self, subject_column, *args, **kwargs):
+            super(_LanglocECOG.FewSubjectExtrapolation, self).__init__(
+                subject_column, *args, **kwargs)
+            self._rng = RandomState(0)
+            self._num_subsamples = 100   # number of subsamples per subject selection
+            self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
+
+        def build_subject_subsamples(self, subjects):
+            return tuple(range(2, len(subjects) + 1, 1))  # reduce computational cost by only using every other point
+
+        def iterate_subsets(self, assembly, num_subjects):
+            # there are 180 subjects which makes for millions of combinations.
+            # to avoid this computational explosion, we choose only a subset of the possible subject sub-samples.
+            subjects = set(assembly[self.subject_column].values)
+            subject_combinations = self._random_combinations(subjects, num_subjects,
+                                                             choice=self._num_subsamples, rng=self._rng)
+            for sub_subjects in tqdm(subject_combinations, desc="subject combinations"):
+                sub_assembly = assembly[{'neuroid': [subject in sub_subjects
+                                                     for subject in assembly[self.subject_column].values]}]
+                yield {self.subject_column: sub_subjects}, sub_assembly
+
+        def extrapolate(self, ceilings):
+            neuroid_ceilings = []
+            raw_keys = ['bootstrapped_params', 'error_low', 'error_high', 'endpoint_x']
+            raw_attrs = defaultdict(list)
+            for i in trange(len(ceilings[self.extrapolation_dimension]),
+                            desc=f'{self.extrapolation_dimension} extrapolations'):
+                try:
+                    # extrapolate per-neuroid ceiling
+                    neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
+                    extrapolated_ceiling = self.extrapolate_neuroid(neuroid_ceiling.squeeze())
+                    extrapolated_ceiling = self.add_neuroid_meta(extrapolated_ceiling, neuroid_ceiling)
+                    neuroid_ceilings.append(extrapolated_ceiling)
+                    # keep track of raw attributes
+                    for key in raw_keys:
+                        values = extrapolated_ceiling.attrs[key]
+                        values = self.add_neuroid_meta(values, neuroid_ceiling)
+                        raw_attrs[key].append(values)
+                except AxisError:  # no extrapolation successful (happens for 1 neuroid in Pereira)
+                    _logger.warning(f"Failed to extrapolate neuroid ceiling {i}", exc_info=True)
+                    continue
+
+            # merge and add meta
+            self._logger.debug("Merging neuroid ceilings")
+            neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
+            neuroid_ceilings.attrs['raw'] = ceilings
+
+            for key, values in raw_attrs.items():
+                self._logger.debug(f"Merging {key}")
+                values = manual_merge(*values, on=self.extrapolation_dimension)
+                neuroid_ceilings.attrs[key] = values
+            # aggregate
+            ceiling = self.aggregate_neuroid_ceilings(neuroid_ceilings, raw_keys=raw_keys)
+            #ceiling.attrs['identifier'] = identifier
+            return ceiling
+        # 
+        def _random_combinations(self, subjects, num_subjects, choice, rng):
+            # following https://stackoverflow.com/a/55929159/2225200
+            # building all `itertools.combinations` followed by `rng.choice` subsampling
+            # would lead to >1 trillion initial samples.
+            subjects = np.array(list(subjects))
+            combinations = set()
+            while len(combinations) < choice:
+                elements = rng.choice(subjects, size=num_subjects, replace=False)
+                combinations.add(tuple(elements))
+            return combinations
+
+        def add_neuroid_meta(self, target, source):
+            target = target.expand_dims(self.extrapolation_dimension)
+            for coord, dims, values in walk_coords(source):
+                if array_is_element(dims, self.extrapolation_dimension):
+                    target[coord] = dims, values
+            return target
+
+        def aggregate_neuroid_ceilings(self, neuroid_ceilings, raw_keys):
+            ceiling = neuroid_ceilings.median(self.extrapolation_dimension)
+            ceiling.attrs['raw'] = neuroid_ceilings
+            for key in raw_keys:
+                values = neuroid_ceilings.attrs[key]
+                aggregate = values.median(self.extrapolation_dimension)
+                if not aggregate.shape:  # scalar value, e.g. for error_low
+                    aggregate = aggregate.item()
+                ceiling.attrs[key] = aggregate
+            return ceiling
+
+        def extrapolate_neuroid(self, ceilings):
+            # figure out how many extrapolation x points we have. E.g. for Pereira, not all combinations are possible
+            subject_subsamples = list(sorted(set(ceilings['num_subjects'].values)))
+            rng = RandomState(0)
+            bootstrap_params = []
+            for bootstrap in range(self.num_bootstraps):
+                bootstrapped_scores = []
+                for num_subjects in subject_subsamples:
+                    num_scores = ceilings.sel(num_subjects=num_subjects)
+                    # the sub_subjects dimension creates nans, get rid of those
+                    num_scores = num_scores.dropna(f'sub_{self.subject_column}')
+                    assert set(num_scores.dims) == {f'sub_{self.subject_column}', 'split'} or \
+                           set(num_scores.dims) == {f'sub_{self.subject_column}'}
+                    # choose from subject subsets and the splits therein, with replacement for variance
+                    choices = num_scores.values.flatten()
+                    bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
+                    bootstrapped_scores.append(np.mean(bootstrapped_score))
+
+                try:
+                    params = self.fit(subject_subsamples, bootstrapped_scores)
+                except:
+                    params = [np.nan, np.nan]
+                params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
+                                      dims=['bootstrap', 'param'])
+                bootstrap_params.append(params)
+            bootstrap_params = merge_data_arrays(bootstrap_params)
+            # find endpoint and error
+            asymptote_threshold = .0005
+            interpolation_xs = np.arange(1000)
+            if not np.isnan(bootstrap_params.values).all():
+                ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
+                               if not np.isnan(params).any()])
+                median_ys = np.median(ys, axis=0)
+                diffs = np.diff(median_ys)
+                end_x = np.where(diffs < asymptote_threshold)[0].min()  # first x where increase smaller than threshold
+                # put together
+                center = np.median(np.array(bootstrap_params)[:, 0])
+                error_low, error_high = ci_error(ys[:, end_x], center=center)
+                score = Score(center)
+                score.attrs['raw'] = ceilings
+                score.attrs['error_low'] = DataAssembly(error_low)
+                score.attrs['error_high'] = DataAssembly(error_high)
+                score.attrs['bootstrapped_params'] = bootstrap_params
+                score.attrs['endpoint_x'] = DataAssembly(end_x)
+            else:
+                score = Score(np.asarray(np.nan))
+                score.attrs['raw'] = ceilings
+                score.attrs['error_low'] = DataAssembly(np.asarray(np.nan))
+                score.attrs['error_high'] = DataAssembly(np.asarray(np.nan))
+                score.attrs['bootstrapped_params'] = bootstrap_params
+                score.attrs['endpoint_x'] = DataAssembly(np.asarray(np.nan))
+            return score
+
+        def fit(self, subject_subsamples, bootstrapped_scores):
+            valid = ~np.isnan(bootstrapped_scores)
+            if sum(valid) < 1:
+                raise RuntimeError("No valid scores in sample")
+            params, pcov = curve_fit(v, subject_subsamples, bootstrapped_scores,
+                                     # v (i.e. max ceiling) is between 0 and 1, tau0 unconstrained
+                                     bounds=([0, -np.inf], [1, np.inf]))
+            return params
+
 
 class LangLocECoGEncoding(_LanglocECOG):
     def __init__(self, identifier):
@@ -1481,7 +1631,7 @@ class LangLocECoGEncoding(_LanglocECOG):
                                            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimuli_id',
                                                                        stratification_coord='stimulus_id'))
 
-        super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
+        super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore_subs_17',threshold=0.05)
 
     def ceiling(self):
         return super(_LanglocECOG, self).ceiling
@@ -1496,7 +1646,19 @@ class LangLocECoGV2Encoding(_LanglocECOG):
                                                                            split_coord='stimuli_id',
                                                                            stratification_coord='stimulus_id'))
             super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
-                                                      version='HighGamma_bipolar_gauss_zscore', threshold=0.01)
+                                                      version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
+
+
+class LangLocECoGSampleEncoding(_LanglocECOG):
+    def __init__(self, identifier, **kwargs):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                                                       split_coord='stimuli_id',
+                                                                       stratification_coord='stimulus_id'))
+        super(LangLocECoGSampleEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
+                                                    version='HighGamma_bipolar_gauss_zscore_subs_3', threshold=0.05)
 
 
 def aggregate(score, combine_layers=True):
@@ -1577,6 +1739,7 @@ benchmark_pool = [
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
     ('LangLocECoG-encoding', LangLocECoGEncoding),
     ('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
+    ('LangLocECoGSample-encoding', LangLocECoGSampleEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
     #('MghMockLang-encoding', MghMockLangEncoding),
