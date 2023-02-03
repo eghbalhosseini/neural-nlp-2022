@@ -1479,7 +1479,7 @@ class _LanglocECOG:
             super(_LanglocECOG.FewSubjectExtrapolation, self).__init__(
                 subject_column, *args, **kwargs)
             self._rng = RandomState(0)
-            self._num_subsamples = 100   # number of subsamples per subject selection
+            self._num_subsamples = 50   # number of subsamples per subject selection
             self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
 
         def build_subject_subsamples(self, subjects):
