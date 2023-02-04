@@ -1336,6 +1336,11 @@ class _LanglocECOG:
         return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
         #return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
 
+    @property
+    def ceiling_estimate(self):
+        return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+        # return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
     def ceiling_normalize_(self,raw_score: Score, ceiling: Score) -> Score:
         # normalize by ceiling, but not above 1
         score = raw_score / ceiling
@@ -1463,7 +1468,7 @@ class _LanglocECOG:
         def __init__(self, subject_column,extrapolation_dimension,num_bootstraps,post_process, *args, **kwargs):
             super(_LanglocECOG.FewSubjectExtrapolation, self).__init__(*args, **kwargs)
             self._rng = RandomState(0)
-            self._num_subsamples = 10   # number of subsamples per subject selection
+            self._num_subsamples = 200   # number of subsamples per subject selection
             #self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
             self._logger = logging.getLogger(fullname(self))
             self.subject_column = subject_column
@@ -1582,8 +1587,7 @@ class _LanglocECOG:
             raw_attrs = defaultdict(list)
             asymptote_threshold = .0005
             interpolation_xs = np.arange(1000)
-            for i in trange(len(ceilings[self.extrapolation_dimension]),
-                            desc=f'{self.extrapolation_dimension} extrapolations'):
+            for i in trange(len(ceilings[self.extrapolation_dimension]),desc=f'{self.extrapolation_dimension} extrapolations'):
                 neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
                 subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
                 rng = RandomState(0)
