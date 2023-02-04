@@ -1,6 +1,7 @@
 """
 Neural benchmarks to probe match of model internals against human internals.
 """
+from scipy.optimize import curve_fit
 import warnings
 from collections import defaultdict
 import itertools
@@ -33,6 +34,7 @@ import pandas as pd
 import pickle, pathlib
 from pathlib import Path
 from brainio.assemblies import NeuroidAssembly
+from brainio.fetch import fullname
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
@@ -1318,8 +1320,8 @@ class _LanglocECOG:
         self._metric = metric
         self._average_sentence = False
         self._ceiler = ExtrapolationCeiling(subject_column='subject')
-        self._few_sub_ceiler=self.FewSubjectExtrapolation(subject_column='subject')
-        self._electrode_ceiler = self.ElectrodeExtrapolation(subject_column='subject')
+        self._few_sub_ceiler=self.FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',num_bootstraps=100,post_process=None)
+
 
     @property
     def identifier(self):
@@ -1331,8 +1333,22 @@ class _LanglocECOG:
 
     @property
     def ceiling(self):
-        #return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
-        return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+        #return self._few_sub_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    def ceiling_normalize_(self,raw_score: Score, ceiling: Score) -> Score:
+        # normalize by ceiling, but not above 1
+        score = raw_score / ceiling
+        score.attrs['raw'] = raw_score
+        score.attrs['ceiling'] = ceiling
+        if score > 1:
+            overshoot_value = score.item()
+            # ideally we would just update the value, but I could not figure out how to update a scalar DataArray
+            attrs = score.attrs
+            score = type(score)(1, coords=score.coords, dims=score.dims)
+            score.attrs = attrs
+            score.attrs['overshoot'] = overshoot_value
+        return score
 
     def ceiling_normalize(self, score):
         raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
@@ -1360,13 +1376,29 @@ class _LanglocECOG:
         elif type=='non-language':
             s_v_n=assembly.s_v_n_ratio<(1-threshold)
         assembly = assembly[{'neuroid': (s_v_n) & (assembly['electrode_valid'] == 1)}]
+        # remove subject that have less than 5 electrodes
+        assembly_new=[]
+        for grp, sub in assembly.groupby('subject'):
+            if sub.neuroid.size < 5:
+                pass 
+            else: 
+                assembly_new.append(sub)
+        
+        assembly_new=xr.concat(assembly_new, dim='neuroid')
+        # check if there is nan in assembly_new
+        assert not np.isnan(assembly_new).any()
+    
         # count number of electrodes with s_v_n_ratio > 0.99
         # print(f"Number of electrodes with s_v_n_ratio > 0.99: {np.sum(assembly['s_v_n_ratio'] > 0.99)}")
         # make a neural assembly from xarray assembly
-        assembly = NeuroidAssembly(assembly)
+        
+        assembly = NeuroidAssembly(assembly_new)
+        
         # add identifier to assembly
+        
         thr_str=str(threshold).replace('.','')
         assembly.attrs['identifier'] = f"LangLoc_ECoG.{version}_{type}_thr_{thr_str}"
+        
         return assembly
 
     def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
@@ -1415,6 +1447,7 @@ class _LanglocECOG:
 
         _logger.info('Scoring across electrodes')
         score = self.apply_metric(model_activations, self._target_assembly)
+        
         return score
 
     def _apply_cross(self, source_assembly, cross_assembly):
@@ -1426,61 +1459,108 @@ class _LanglocECOG:
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
         return self._single_metric(source_assembly, cross_assembly)
 
-    class ElectrodeExtrapolation(ExtrapolationCeiling):
-        """ extrapolate to infinitely many electrodes """
-
-        def __init__(self, *args, **kwargs):
-            super(_LanglocECOG.ElectrodeExtrapolation, self).__init__(*args, **kwargs)
+    class FewSubjectExtrapolation:
+        def __init__(self, subject_column,extrapolation_dimension,num_bootstraps,post_process, *args, **kwargs):
+            super(_LanglocECOG.FewSubjectExtrapolation, self).__init__(*args, **kwargs)
             self._rng = RandomState(0)
-            self._num_samples = 15  # number of samples per electrode selection
+            self._num_subsamples = 10   # number of subsamples per subject selection
+            #self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
+            self._logger = logging.getLogger(fullname(self))
+            self.subject_column = subject_column
+            self.extrapolation_dimension = extrapolation_dimension
+            self.num_bootstraps = num_bootstraps
+            self._post_process = post_process
 
+        @store(identifier_ignore=['assembly', 'metric'])
+        def __call__(self, identifier, assembly, metric):
+            scores = self.collect(identifier, assembly=assembly, metric=metric)
+            return self.extrapolate(scores)
+
+        @store(identifier_ignore=['assembly', 'metric'])
         def collect(self, identifier, assembly, metric):
-            """ Instead of iterating over subject combinations and then afterwards over holdout subjects,
-            we here iterate over holdout subjects and then over electrode sub-combinations of the remaining pool. """
             subjects = set(assembly[self.subject_column].values)
+            subject_subsamples = self.build_subject_subsamples(subjects)
             scores = []
-            for holdout_subject in tqdm(subjects, desc='subjects'):
-                subject_pool = subjects - {holdout_subject}
-                subject_pool_assembly = assembly[{'neuroid': [subject in subject_pool
-                                                              for subject in assembly[self.subject_column].values]}]
-                holdout_subject_assembly = assembly[{'neuroid': [subject == holdout_subject
-                                                                 for subject in assembly[self.subject_column].values]}]
+            scores_raw=[]
+            for num_subjects in tqdm(subject_subsamples, desc='num subjects'):
+                selection_combinations = self.iterate_subsets(assembly, num_subjects=num_subjects)
+                comb_scores=[]
+                for selections, sub_assembly in tqdm(selection_combinations, desc='selections'):
+                    sub_scores=[]
+                    iterate_subjects = np.unique(sub_assembly[self.subject_column].values)
+                    for subject in tqdm(iterate_subjects, desc='subjects',disable=True):
+                        # select subject data from sub_assembly
+                        True
+                        subject_assembly = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] == subject).values)
+                        # select data from other subjects
+                        other_subject_data = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] != subject).values)
+                        # run subject as a neural candidate
+                        score=metric(other_subject_data, subject_assembly)
+                        assert not np.all(np.isnan(score.raw.values))
+                        apply_raw = 'raw' in score.attrs and not hasattr(score.raw, self.subject_column)  # only propagate if column not part of score
+                        score = score.expand_dims(self.subject_column, _apply_raw=apply_raw)
+                        score.__setitem__(self.subject_column, [subject], _apply_raw=apply_raw)
+                        sub_scores.append(score)
+                    comb_scores.append(sub_scores)
+                # go into each element of comb_scores and concatenate the raw attributes along neuriod dimension
+                comb_scores_raw=[]
+                for i, sub_scores in enumerate(comb_scores):
+                    sub_scores_raw = [s.raw for s in sub_scores]
+                    # take the mean over splits for each element in sub_scores_raw
+                    sub_scores_raw = xr.concat(sub_scores_raw, dim='neuroid')
+                    sub_scores_raw = sub_scores_raw.mean('split')
+                    comb_scores_raw.append(sub_scores_raw)
+                # concatenate the comb_scores_raw along neuroid dimension
+                comb_scores_raw = xr.concat(comb_scores_raw, dim='subsample')
+                # assign a value to subsample coordiante as an array with num_subjects
+                comb_scores_raw = comb_scores_raw.assign_coords(subsample=np.ones(comb_scores_raw.shape[0])*num_subjects)
+                # make sure that comb_scores_raw has the same number of neuroids as the original assembly
+                # check if comb_scores_raw has the same number of neuroids as the original assembly and if not, add the missing neuroids as nan
+                if comb_scores_raw.shape[1] != assembly.shape[1]:
+                    # get the neuroid ids that are missing
+                    missing_neuroids = np.setdiff1d(assembly['neuroid_id'].values, comb_scores_raw['neuroid_id'].values)
+                    missing_neuroids =np.sum([assembly.neuroid_id.values==x for x in missing_neuroids],axis=0).astype(bool)
+                    temp_assembly = assembly.sel(neuroid=missing_neuroids)
+                    temp_assembly = temp_assembly.drop('presentation')
+                    temp_assembly=temp_assembly.sum('presentation')
+                    temp_assembly.values *= np.nan
+                    comb_scores_raw=xr.concat([comb_scores_raw, temp_assembly], dim='neuroid')
 
-                electrodes = subject_pool_assembly['neuroid_id'].values
-                electrodes_range = np.arange(5, len(electrodes), 5)
-                for num_electrodes in tqdm(electrodes_range, desc='num electrodes'):
-                    electrodes_combinations = self._choose_electrodes(electrodes, num_electrodes,
-                                                                      num_choices=self._num_samples)
-                    for electrodes_split, electrodes_selection in enumerate(electrodes_combinations):
-                        electrodes_assembly = subject_pool_assembly[{'neuroid': [
-                            neuroid_id in electrodes_selection
-                            for neuroid_id in subject_pool_assembly['neuroid_id'].values]}]
-                        score = metric(electrodes_assembly, holdout_subject_assembly)
-                        # store scores
-                        score = score.expand_dims(f"sub_{self.subject_column}")
-                        score.__setitem__(f"sub_{self.subject_column}", [holdout_subject])
-                        score = score.expand_dims('num_electrodes').expand_dims('electrodes_split')
-                        score['num_electrodes'] = [num_electrodes]
-                        score['electrodes_split'] = [electrodes_split]
-                        scores.append(score)
+                    # sort the neuroid_ids
+                    comb_scores_raw = comb_scores_raw.sortby('neuroid_id')
+                else:
+                    comb_scores_raw = comb_scores_raw.sortby('neuroid_id')
+                scores_raw.append(comb_scores_raw)
 
-            scores = Score.merge(*scores)
-            ceilings = scores.raw
-            ceilings = ceilings.rename({'split': 'subsplit'}).stack(split=['electrodes_split', 'subsplit'])
-            ceilings.attrs['raw'] = scores
-            return ceilings
+            scores=xr.concat(scores_raw, dim='subsample')
+            # for x in a.transpose().values:
+            #     plt.scatter(a.subsample.values,x,s=5,c='k',alpha=0.1)
+            # plt.show()
 
-        def _choose_electrodes(self, electrodes, num_electrodes, num_choices):
-            choices = [self._rng.choice(electrodes, size=num_electrodes, replace=False) for _ in range(num_choices)]
-            return choices
-
-    class FewSubjectExtrapolation(ExtrapolationCeiling):
-        def __init__(self, subject_column, *args, **kwargs):
-            super(_LanglocECOG.FewSubjectExtrapolation, self).__init__(
-                subject_column, *args, **kwargs)
-            self._rng = RandomState(0)
-            self._num_subsamples = 100   # number of subsamples per subject selection
-            self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
+            #
+            #         score = Score.merge(*sub_scores)
+            #         error = score.sel(aggregation='center').std(self.subject_column)
+            #         score = apply_aggregate(lambda score: score.mean(self.subject_column), score)
+            #         score.loc[{'aggregation': 'error'}] = error
+            #         #score = self.holdout_ceiling(assembly=sub_assembly, metric=metric)
+            #         score = score.expand_dims('num_subjects')
+            #         score['num_subjects'] = [num_subjects]
+            #         for key, selection in selections.items():
+            #             expand_dim = f'sub_{key}'
+            #             score = score.expand_dims(expand_dim)
+            #             score[expand_dim] = [str(selection)]
+            #         scores.append(score.raw)
+            #
+            #         # except KeyError as e:  # nothing to merge
+            #         #     if str(e) == "'z'":
+            #         #         self._logger.debug(f"Ignoring merge error {e}")
+            #         #         continue
+            #         #     else:
+            #         #         raise e
+            #
+            # scores = Score.merge(*scores)
+            # scores = self.post_process(scores)
+            # return scores
 
         def build_subject_subsamples(self, subjects):
             return tuple(range(2, len(subjects) + 1, 1))  # reduce computational cost by only using every other point
@@ -1500,36 +1580,60 @@ class _LanglocECOG:
             neuroid_ceilings = []
             raw_keys = ['bootstrapped_params', 'error_low', 'error_high', 'endpoint_x']
             raw_attrs = defaultdict(list)
+            asymptote_threshold = .0005
+            interpolation_xs = np.arange(1000)
             for i in trange(len(ceilings[self.extrapolation_dimension]),
                             desc=f'{self.extrapolation_dimension} extrapolations'):
-                try:
-                    # extrapolate per-neuroid ceiling
-                    neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
-                    extrapolated_ceiling = self.extrapolate_neuroid(neuroid_ceiling.squeeze())
-                    extrapolated_ceiling = self.add_neuroid_meta(extrapolated_ceiling, neuroid_ceiling)
-                    neuroid_ceilings.append(extrapolated_ceiling)
-                    # keep track of raw attributes
-                    for key in raw_keys:
-                        values = extrapolated_ceiling.attrs[key]
-                        values = self.add_neuroid_meta(values, neuroid_ceiling)
-                        raw_attrs[key].append(values)
-                except AxisError:  # no extrapolation successful (happens for 1 neuroid in Pereira)
-                    _logger.warning(f"Failed to extrapolate neuroid ceiling {i}", exc_info=True)
-                    continue
+                neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
+                subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
+                rng = RandomState(0)
+                bootstrap_params = []
+                for bootstrap in range(self.num_bootstraps):
+                    bootstrapped_scores = []
+                    for num_subjects in subject_subsamples:
+                        num_scores = neuroid_ceiling.sel(subsample=num_subjects)
+                        choices = num_scores.values.flatten()
+                        bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
+                        bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+                        #bootstrapped_score = rng.choice(choices, size=10, replace=True)
+                        #bootstrapped_scores.append(np.nanmean(bootstrapped_score))
 
-            # merge and add meta
-            self._logger.debug("Merging neuroid ceilings")
+                    valid = ~np.isnan(bootstrapped_scores)
+                    if sum(valid) < 1:
+                        raise RuntimeError("No valid scores in sample")
+                    # drop nan
+                    y = np.array(bootstrapped_scores)[valid]
+                    x= np.array(subject_subsamples)[valid]
+                    try:
+                        params = self.fit(x, y)
+                    except:
+                        params = [np.nan, np.nan]
+                    params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
+                                          dims=['bootstrap', 'param'])
+                    bootstrap_params.append(params)
+                bootstrap_params = merge_data_arrays(bootstrap_params)
+                if not np.isnan(bootstrap_params.values).all():
+                    ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
+                                   if not np.isnan(params).any()])
+                    median_ys = np.median(ys, axis=0)
+                    diffs = np.diff(median_ys)
+                    end_x = np.where(diffs < asymptote_threshold)[
+                        0].min()  # first x where increase smaller than threshold
+                    # put together
+                    center = np.median(np.array(bootstrap_params)[:, 0])
+                    error_low, error_high = ci_error(ys[:, end_x], center=center)
+                    ceiling_estimate = Score(center)
+                    ceiling_estimate.attrs['raw'] = neuroid_ceiling
+                    ceiling_estimate.attrs['error_low'] = DataAssembly(error_low)
+                    ceiling_estimate.attrs['error_high'] = DataAssembly(error_high)
+                    ceiling_estimate.attrs['bootstrapped_params'] = bootstrap_params
+                    ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
+                ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
+                neuroid_ceilings.append(ceiling_estimate)
             neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
-            neuroid_ceilings.attrs['raw'] = ceilings
 
-            for key, values in raw_attrs.items():
-                self._logger.debug(f"Merging {key}")
-                values = manual_merge(*values, on=self.extrapolation_dimension)
-                neuroid_ceilings.attrs[key] = values
-            # aggregate
-            ceiling = self.aggregate_neuroid_ceilings(neuroid_ceilings, raw_keys=raw_keys)
-            #ceiling.attrs['identifier'] = identifier
-            return ceiling
+            neuroid_ceilings.attrs['raw'] = ceilings
+            return neuroid_ceilings
         # 
         def _random_combinations(self, subjects, num_subjects, choice, rng):
             # following https://stackoverflow.com/a/55929159/2225200
@@ -1577,7 +1681,6 @@ class _LanglocECOG:
                     choices = num_scores.values.flatten()
                     bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
                     bootstrapped_scores.append(np.mean(bootstrapped_score))
-
                 try:
                     params = self.fit(subject_subsamples, bootstrapped_scores)
                 except:
@@ -1706,7 +1809,7 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
     if 'neuroid_id' in ceiling_neuroids.dims:
         assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
     elif 'neuroid' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid'].values)
+        assert set(neuroids['neuroid'].values) == set(ceiling_neuroids['neuroid'].values)
     ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
                                                      for neuroid_id in neuroids['neuroid_id'].values]}]  # align
     ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
