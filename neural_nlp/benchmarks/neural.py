@@ -1452,7 +1452,7 @@ class _LanglocECOG:
 
         _logger.info('Scoring across electrodes')
         score = self.apply_metric(model_activations, self._target_assembly)
-        
+        score = self.ceiling_normalize(score)
         return score
 
     def _apply_cross(self, source_assembly, cross_assembly):
