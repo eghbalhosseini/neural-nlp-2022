@@ -1743,6 +1743,9 @@ class LangLocECoGEncoding(_LanglocECOG):
     def ceiling(self):
         return super(_LanglocECOG, self).ceiling
 
+    def ceiling_estimate(self):
+        return super(_LanglocECOG, self).ceiling_estimate
+
 
 class LangLocECoGV2Encoding(_LanglocECOG):
         def __init__(self,identifier,**kwargs):
@@ -1754,6 +1757,12 @@ class LangLocECoGV2Encoding(_LanglocECOG):
                                                                            stratification_coord='stimulus_id'))
             super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                       version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
+
+        def ceiling(self):
+            return super(_LanglocECOG, self).ceiling
+
+        def ceiling_estimate(self):
+            return super(_LanglocECOG, self).ceiling_estimate
 
 
 class LangLocECoGSampleEncoding(_LanglocECOG):
