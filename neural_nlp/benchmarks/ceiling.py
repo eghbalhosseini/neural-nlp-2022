@@ -263,3 +263,270 @@ def _coords_match(elements, dim, match_values=False):
 
 class NoOverlapException(Exception):
     pass
+
+
+
+class FewSubjectExtrapolation:
+    def __init__(self, subject_column,extrapolation_dimension,num_bootstraps,post_process, *args, **kwargs):
+        super(FewSubjectExtrapolation, self).__init__(*args, **kwargs)
+        self._rng = RandomState(0)
+        self._num_subsamples = 200   # number of subsamples per subject selection
+        #self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
+        self._logger = logging.getLogger(fullname(self))
+        self.subject_column = subject_column
+        self.extrapolation_dimension = extrapolation_dimension
+        self.num_bootstraps = num_bootstraps
+        self._post_process = post_process
+
+    @store(identifier_ignore=['assembly', 'metric'])
+    def __call__(self, identifier, assembly, metric):
+        scores = self.collect(identifier, assembly=assembly, metric=metric)
+        return self.extrapolate(scores)
+
+    @store(identifier_ignore=['assembly', 'metric'])
+    def collect(self, identifier, assembly, metric):
+        subjects = set(assembly[self.subject_column].values)
+        subject_subsamples = self.build_subject_subsamples(subjects)
+        scores = []
+        scores_raw=[]
+        for num_subjects in tqdm(subject_subsamples, desc='num subjects'):
+            selection_combinations = self.iterate_subsets(assembly, num_subjects=num_subjects)
+            comb_scores=[]
+            for selections, sub_assembly in tqdm(selection_combinations, desc='selections'):
+                sub_scores=[]
+                iterate_subjects = np.unique(sub_assembly[self.subject_column].values)
+                for subject in tqdm(iterate_subjects, desc='subjects',disable=True):
+                    # select subject data from sub_assembly
+                    True
+                    subject_assembly = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] == subject).values)
+                    # select data from other subjects
+                    other_subject_data = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] != subject).values)
+                    # run subject as a neural candidate
+                    score=metric(other_subject_data, subject_assembly)
+                    assert not np.all(np.isnan(score.raw.values))
+                    apply_raw = 'raw' in score.attrs and not hasattr(score.raw, self.subject_column)  # only propagate if column not part of score
+                    score = score.expand_dims(self.subject_column, _apply_raw=apply_raw)
+                    score.__setitem__(self.subject_column, [subject], _apply_raw=apply_raw)
+                    sub_scores.append(score)
+                comb_scores.append(sub_scores)
+            # go into each element of comb_scores and concatenate the raw attributes along neuriod dimension
+            comb_scores_raw=[]
+            for i, sub_scores in enumerate(comb_scores):
+                sub_scores_raw = [s.raw for s in sub_scores]
+                # take the mean over splits for each element in sub_scores_raw
+                sub_scores_raw = xr.concat(sub_scores_raw, dim='neuroid')
+                sub_scores_raw = sub_scores_raw.mean('split')
+                comb_scores_raw.append(sub_scores_raw)
+            # concatenate the comb_scores_raw along neuroid dimension
+            comb_scores_raw = xr.concat(comb_scores_raw, dim='subsample')
+            # assign a value to subsample coordiante as an array with num_subjects
+            comb_scores_raw = comb_scores_raw.assign_coords(subsample=np.ones(comb_scores_raw.shape[0])*num_subjects)
+            # make sure that comb_scores_raw has the same number of neuroids as the original assembly
+            # check if comb_scores_raw has the same number of neuroids as the original assembly and if not, add the missing neuroids as nan
+            if comb_scores_raw.shape[1] != assembly.shape[1]:
+                # get the neuroid ids that are missing
+                missing_neuroids = np.setdiff1d(assembly['neuroid_id'].values, comb_scores_raw['neuroid_id'].values)
+                missing_neuroids =np.sum([assembly.neuroid_id.values==x for x in missing_neuroids],axis=0).astype(bool)
+                temp_assembly = assembly.sel(neuroid=missing_neuroids)
+                temp_assembly = temp_assembly.drop('presentation')
+                temp_assembly=temp_assembly.sum('presentation')
+                temp_assembly.values *= np.nan
+                comb_scores_raw=xr.concat([comb_scores_raw, temp_assembly], dim='neuroid')
+
+                # sort the neuroid_ids
+                comb_scores_raw = comb_scores_raw.sortby('neuroid_id')
+            else:
+                comb_scores_raw = comb_scores_raw.sortby('neuroid_id')
+            scores_raw.append(comb_scores_raw)
+
+        scores=xr.concat(scores_raw, dim='subsample')
+        # for x in a.transpose().values:
+        #     plt.scatter(a.subsample.values,x,s=5,c='k',alpha=0.1)
+        # plt.show()
+
+        #
+        #         score = Score.merge(*sub_scores)
+        #         error = score.sel(aggregation='center').std(self.subject_column)
+        #         score = apply_aggregate(lambda score: score.mean(self.subject_column), score)
+        #         score.loc[{'aggregation': 'error'}] = error
+        #         #score = self.holdout_ceiling(assembly=sub_assembly, metric=metric)
+        #         score = score.expand_dims('num_subjects')
+        #         score['num_subjects'] = [num_subjects]
+        #         for key, selection in selections.items():
+        #             expand_dim = f'sub_{key}'
+        #             score = score.expand_dims(expand_dim)
+        #             score[expand_dim] = [str(selection)]
+        #         scores.append(score.raw)
+        #
+        #         # except KeyError as e:  # nothing to merge
+        #         #     if str(e) == "'z'":
+        #         #         self._logger.debug(f"Ignoring merge error {e}")
+        #         #         continue
+        #         #     else:
+        #         #         raise e
+        #
+        # scores = Score.merge(*scores)
+        # scores = self.post_process(scores)
+        # return scores
+
+    def build_subject_subsamples(self, subjects):
+        return tuple(range(2, len(subjects) + 1, 1))  # reduce computational cost by only using every other point
+
+    def iterate_subsets(self, assembly, num_subjects):
+        # there are 180 subjects which makes for millions of combinations.
+        # to avoid this computational explosion, we choose only a subset of the possible subject sub-samples.
+        subjects = set(assembly[self.subject_column].values)
+        subject_combinations = self._random_combinations(subjects, num_subjects,
+                                                         choice=self._num_subsamples, rng=self._rng)
+        for sub_subjects in tqdm(subject_combinations, desc="subject combinations"):
+            sub_assembly = assembly[{'neuroid': [subject in sub_subjects
+                                                 for subject in assembly[self.subject_column].values]}]
+            yield {self.subject_column: sub_subjects}, sub_assembly
+
+    def extrapolate(self, ceilings):
+        neuroid_ceilings = []
+        raw_keys = ['bootstrapped_params', 'error_low', 'error_high', 'endpoint_x']
+        raw_attrs = defaultdict(list)
+        asymptote_threshold = .0005
+        interpolation_xs = np.arange(1000)
+        for i in trange(len(ceilings[self.extrapolation_dimension]),desc=f'{self.extrapolation_dimension} extrapolations'):
+            neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
+            subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
+            rng = RandomState(0)
+            bootstrap_params = []
+            for bootstrap in range(self.num_bootstraps):
+                bootstrapped_scores = []
+                for num_subjects in subject_subsamples:
+                    num_scores = neuroid_ceiling.sel(subsample=num_subjects)
+                    choices = num_scores.values.flatten()
+                    bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
+                    bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+                    #bootstrapped_score = rng.choice(choices, size=10, replace=True)
+                    #bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+
+                valid = ~np.isnan(bootstrapped_scores)
+                if sum(valid) < 1:
+                    raise RuntimeError("No valid scores in sample")
+                # drop nan
+                y = np.array(bootstrapped_scores)[valid]
+                x= np.array(subject_subsamples)[valid]
+                try:
+                    params = self.fit(x, y)
+                except:
+                    params = [np.nan, np.nan]
+                params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
+                                      dims=['bootstrap', 'param'])
+                bootstrap_params.append(params)
+            bootstrap_params = merge_data_arrays(bootstrap_params)
+            if not np.isnan(bootstrap_params.values).all():
+                ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
+                               if not np.isnan(params).any()])
+                median_ys = np.median(ys, axis=0)
+                diffs = np.diff(median_ys)
+                end_x = np.where(diffs < asymptote_threshold)[
+                    0].min()  # first x where increase smaller than threshold
+                # put together
+                center = np.median(np.array(bootstrap_params)[:, 0])
+                error_low, error_high = ci_error(ys[:, end_x], center=center)
+                ceiling_estimate = Score(center)
+                ceiling_estimate.attrs['raw'] = neuroid_ceiling
+                ceiling_estimate.attrs['error_low'] = DataAssembly(error_low)
+                ceiling_estimate.attrs['error_high'] = DataAssembly(error_high)
+                ceiling_estimate.attrs['bootstrapped_params'] = bootstrap_params
+                ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
+            ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
+            neuroid_ceilings.append(ceiling_estimate)
+        neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
+
+        neuroid_ceilings.attrs['raw'] = ceilings
+        return neuroid_ceilings
+    #
+    def _random_combinations(self, subjects, num_subjects, choice, rng):
+        # following https://stackoverflow.com/a/55929159/2225200
+        # building all `itertools.combinations` followed by `rng.choice` subsampling
+        # would lead to >1 trillion initial samples.
+        subjects = np.array(list(subjects))
+        combinations = set()
+        while len(combinations) < choice:
+            elements = rng.choice(subjects, size=num_subjects, replace=False)
+            combinations.add(tuple(elements))
+        return combinations
+
+    def add_neuroid_meta(self, target, source):
+        target = target.expand_dims(self.extrapolation_dimension)
+        for coord, dims, values in walk_coords(source):
+            if array_is_element(dims, self.extrapolation_dimension):
+                target[coord] = dims, values
+        return target
+
+    def aggregate_neuroid_ceilings(self, neuroid_ceilings, raw_keys):
+        ceiling = neuroid_ceilings.median(self.extrapolation_dimension)
+        ceiling.attrs['raw'] = neuroid_ceilings
+        for key in raw_keys:
+            values = neuroid_ceilings.attrs[key]
+            aggregate = values.median(self.extrapolation_dimension)
+            if not aggregate.shape:  # scalar value, e.g. for error_low
+                aggregate = aggregate.item()
+            ceiling.attrs[key] = aggregate
+        return ceiling
+
+    def extrapolate_neuroid(self, ceilings):
+        # figure out how many extrapolation x points we have. E.g. for Pereira, not all combinations are possible
+        subject_subsamples = list(sorted(set(ceilings['num_subjects'].values)))
+        rng = RandomState(0)
+        bootstrap_params = []
+        for bootstrap in range(self.num_bootstraps):
+            bootstrapped_scores = []
+            for num_subjects in subject_subsamples:
+                num_scores = ceilings.sel(num_subjects=num_subjects)
+                # the sub_subjects dimension creates nans, get rid of those
+                num_scores = num_scores.dropna(f'sub_{self.subject_column}')
+                assert set(num_scores.dims) == {f'sub_{self.subject_column}', 'split'} or \
+                       set(num_scores.dims) == {f'sub_{self.subject_column}'}
+                # choose from subject subsets and the splits therein, with replacement for variance
+                choices = num_scores.values.flatten()
+                bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
+                bootstrapped_scores.append(np.mean(bootstrapped_score))
+            try:
+                params = self.fit(subject_subsamples, bootstrapped_scores)
+            except:
+                params = [np.nan, np.nan]
+            params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
+                                  dims=['bootstrap', 'param'])
+            bootstrap_params.append(params)
+        bootstrap_params = merge_data_arrays(bootstrap_params)
+        # find endpoint and error
+        asymptote_threshold = .0005
+        interpolation_xs = np.arange(1000)
+        if not np.isnan(bootstrap_params.values).all():
+            ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
+                           if not np.isnan(params).any()])
+            median_ys = np.median(ys, axis=0)
+            diffs = np.diff(median_ys)
+            end_x = np.where(diffs < asymptote_threshold)[0].min()  # first x where increase smaller than threshold
+            # put together
+            center = np.median(np.array(bootstrap_params)[:, 0])
+            error_low, error_high = ci_error(ys[:, end_x], center=center)
+            score = Score(center)
+            score.attrs['raw'] = ceilings
+            score.attrs['error_low'] = DataAssembly(error_low)
+            score.attrs['error_high'] = DataAssembly(error_high)
+            score.attrs['bootstrapped_params'] = bootstrap_params
+            score.attrs['endpoint_x'] = DataAssembly(end_x)
+        else:
+            score = Score(np.asarray(np.nan))
+            score.attrs['raw'] = ceilings
+            score.attrs['error_low'] = DataAssembly(np.asarray(np.nan))
+            score.attrs['error_high'] = DataAssembly(np.asarray(np.nan))
+            score.attrs['bootstrapped_params'] = bootstrap_params
+            score.attrs['endpoint_x'] = DataAssembly(np.asarray(np.nan))
+        return score
+
+    def fit(self, subject_subsamples, bootstrapped_scores):
+        valid = ~np.isnan(bootstrapped_scores)
+        if sum(valid) < 1:
+            raise RuntimeError("No valid scores in sample")
+        params, pcov = curve_fit(v, subject_subsamples, bootstrapped_scores,
+                                 # v (i.e. max ceiling) is between 0 and 1, tau0 unconstrained
+                                 bounds=([0, -np.inf], [1, np.inf]))
+        return params
