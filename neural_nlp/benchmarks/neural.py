@@ -1219,9 +1219,7 @@ class _ANNSet1ECoGBenchmark:
         self.average_sentence=False
         self._ceiler = ExtrapolationCeiling(subject_column='subject')
 
-    def apply_metric(self, model_activations, target_assembly):
-        return self._metric(model_activations, target_assembly)
-
+    @property
     def ceiling(self):
         return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
 
@@ -1229,6 +1227,9 @@ class _ANNSet1ECoGBenchmark:
     def identifier(self):
         return self._identifier
 
+    def apply_metric(self, model_activations, target_assembly):
+        return self._metric(model_activations, target_assembly)
+    
     def _load_assembly(self,version='HighGamma_unipolar_gauss_zscore',type='language',threshold=0.05):
         file_id = Path(ANNfMRI_PARENT, f'ANNSet1_ECoG.train.{version}.pkl')
         assembly = pd.read_pickle(file_id.__str__())
@@ -1327,6 +1328,10 @@ class ANNSet1ECoGEncoding(_ANNSet1ECoGBenchmark):
                                                                        stratification_coord='stimulus_id'))
 
         super(ANNSet1ECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
+
+    @property
+    def ceiling(self):
+        return super(ANNSet1ECoGEncoding, self).ceiling
 
 class _LanglocECOG:
     """
