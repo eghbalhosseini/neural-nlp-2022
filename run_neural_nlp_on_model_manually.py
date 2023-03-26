@@ -21,11 +21,12 @@ elif user=='ehoseini':
 
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
+    benchmark_name="Pereira2018-rand-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
     #benchmark_name = "ANNSet1ECoG-encoding"
     #benchmark_name ="Fedorenko2016v3-encoding"
-    benchmark_name = 'LangLocECoGv2-encoding'
+    #benchmark_name = 'LangLocECoGv2-encoding'
     model_name="distilgpt2"
     #model_name="gpt2-medium"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]

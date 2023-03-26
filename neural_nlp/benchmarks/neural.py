@@ -38,11 +38,12 @@ from brainio.fetch import fullname
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
 
 elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
-
+    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
 
 
 _logger = logging.getLogger(__name__)
@@ -406,7 +407,7 @@ class _PereiraBenchmark(Benchmark):
     def _apply_cross(self, source_assembly, cross_assembly):
         cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
         source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
-        assert len(cross_assembly['presentation']) in [243, 384]
+        #assert len(cross_assembly['presentation']) in [243, 384]
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
@@ -550,6 +551,71 @@ class PereiraEncoding(_PereiraBenchmark):
         return super(PereiraEncoding, self).ceiling
 
 
+class PereiraSamplerEncoding(_PereiraBenchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(PereiraSamplerEncoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='max'):
+        return  pd.read_pickle(f'{PEREIRA2018_SAMPLE}/pereira_ds_{version}_v2.pkl')
+    
+    @property
+    @load_s3(key='Pereira2018-encoding-ceiling')
+    def ceiling(self):
+        return super(PereiraSamplerEncoding, self).ceiling
+    
+    
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = listen_to(candidate, stimulus_set)
+        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
+        _logger.info('subsampling sentences')
+        # filter model_activations based on optim_sentences
+
+        target_assembly = self._target_assembly.sel(presentation=self._target_assembly['optim_sentence'])
+        # select rows from model_activations based on target_assembly
+        model_activations = model_activations.sel(presentation=model_activations['stimulus_id'].isin(target_assembly['stimulus_id']))
+        # make sure the sentence_id dimension is the same between the two
+        assert set(model_activations['stimulus_id'].values) == set(target_assembly['stimulus_id'].values)
+        _logger.info('Scoring across experiments & atlases')
+        # update self._target_assembly with target_assembly
+        #self._target_assembly = target_assembly
+        cross_scores = self._cross(target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split').mean('experiment'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        return score
+
+class PereiraSamplerMaxEncoding(PereiraSamplerEncoding):
+    def _load_assembly(self,version='max'):
+        return super()._load_assembly(version='max')
+
+class PereiraSamplerMinEncoding(PereiraSamplerEncoding):
+    def _load_assembly(self,version='min'):
+        return super()._load_assembly(version='min')
+
+class PereiraSamplerRandEncoding(PereiraSamplerEncoding):
+    def _load_assembly(self,version='rand'):
+        return super()._load_assembly(version='rand')
+
+
 class _PereiraSubjectWise(_PereiraBenchmark):
     def __init__(self, **kwargs):
         super(_PereiraSubjectWise, self).__init__(**kwargs)
@@ -576,7 +642,6 @@ class _PereiraSubjectWise(_PereiraBenchmark):
             # skip parent implementation, go straight to parent's parent
             return super(_PereiraBenchmark.PereiraExtrapolationCeiling, self).extrapolate(ceilings)
 
-
 class PereiraDecoding(_PereiraSubjectWise):
     """
     data source:
@@ -591,7 +656,6 @@ class PereiraDecoding(_PereiraSubjectWise):
             crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None))
         metric = Invert(metric)
         super(PereiraDecoding, self).__init__(metric=metric, **kwargs)
-
 
 class PereiraRDM(_PereiraSubjectWise):
     """
@@ -697,7 +761,6 @@ class _ANNSet1fMRIBenchmark(Benchmark):
             assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
         return assembly
 
-
     def __call__(self, candidate):
         stimulus_set = self._target_assembly['stimulus']
 
@@ -773,7 +836,6 @@ class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
     def ceiling(self):
         ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
         return ceiling_val
-
 
 class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
     """
@@ -1608,6 +1670,9 @@ def consistency(score, ceiling):
 benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
+    ('Pereira2018-max-encoding', PereiraSamplerMaxEncoding),
+    ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
+    ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),
     ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
     ('ANNSet1fMRI-wordForm-encoding',ANNSet1fMRIEncoding_V2),
     ('ANNSet1fMRISentence-encoding', ANNSet1fMRISentenceEncoding),
