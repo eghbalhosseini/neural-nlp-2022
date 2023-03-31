@@ -616,6 +616,44 @@ class PereiraSamplerRandEncoding(PereiraSamplerEncoding):
         return super()._load_assembly(version='rand')
 
 
+class PereiraSamplerV2Encoding(_PereiraBenchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(PereiraSamplerV2Encoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self, version='max'):
+        assembly=pd.read_pickle(f'{PEREIRA2018_SAMPLE}/pereira_ds_{version}.pkl')
+        # change stimulu set name  so that it is not confused with the original pereira dataset
+        assembly.attrs['stimulus_set'].name=assembly.attrs['stimulus_set'].name+version+'_v2'
+        return assembly
+
+    @property
+    @load_s3(key='Pereira2018-encoding-ceiling')
+    def ceiling(self):
+        return super(PereiraSamplerV2Encoding, self).ceiling
+
+class PereiraSamplerMaxV2Encoding(PereiraSamplerV2Encoding):
+    def _load_assembly(self,version='max'):
+        return super()._load_assembly(version='max')
+
+class PereiraSamplerMinV2Encoding(PereiraSamplerV2Encoding):
+    def _load_assembly(self,version='min'):
+        return super()._load_assembly(version='min')
+
+class PereiraSamplerRandV2Encoding(PereiraSamplerV2Encoding):
+    def _load_assembly(self,version='rand'):
+        return super()._load_assembly(version='rand')
+
+
 class _PereiraSubjectWise(_PereiraBenchmark):
     def __init__(self, **kwargs):
         super(_PereiraSubjectWise, self).__init__(**kwargs)
@@ -1671,6 +1709,9 @@ benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
     ('Pereira2018-max-encoding', PereiraSamplerMaxEncoding),
+    ('Pereira2018-max-V2-encoding', PereiraSamplerMaxV2Encoding),
+    ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
+    ('Pereira2018-rand-V2-encoding', PereiraSamplerRandV2Encoding),
     ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
     ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),
     ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
