@@ -25,8 +25,8 @@ def get_args():
 
 def mock_get_args():
     mock_args = namedtuple('debug', ['checkpoint_dir', 'hf_save_dir'])
-    debug_args = mock_args('/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/',
-                        '/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/'
+    debug_args = mock_args('/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/',
+                        '/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_0/global_step200/'
                           )
     return debug_args
 
@@ -63,7 +63,7 @@ def convert_gpt_neox_config_to_hf(config_dir):
     else:
         # assume a location for the vocab file
 
-        vocab_file = Path('/om/user/ehoseini/gpt-neox/data/gpt2-vocab.json')
+        vocab_file = Path('/om/weka/evlab/ehoseini/gpt-neox/data/gpt2-vocab.json')
         with open(str(vocab_file), 'rb')  as vocab:
             vocab_data = vocab.read()
             vocab_size = len(json.loads(vocab_data))

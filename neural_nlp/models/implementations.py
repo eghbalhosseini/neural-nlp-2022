@@ -1198,7 +1198,7 @@ for identifier, num_layers in [
     ))
 
 
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/']
+checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/']
 for (identifier, num_layers), ckpnts in itertools.product([
     ('gpt2-neox-pos_learned-1B-v2', 12,)], np.arange(2500,320000+2500,2500)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
@@ -1226,7 +1226,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 
 
 # 161 checkpoints
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
+checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
 for (identifier, num_layers), ckpnts in itertools.product([
     ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(250,40250+100,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
@@ -1257,7 +1257,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 
 
 # 46 models
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_10m_v2/gpt2/checkpoints_6/']
+checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_10m_v2/gpt2/checkpoints_6/']
 for (identifier, num_layers), ckpnts in itertools.product([
     ('gpt2-neox-pos_learned-10M-v2', 12,)], np.arange(250,11500+250,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
@@ -1285,7 +1285,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
-checkpoints=['/om/user/ehoseini/MyData/miniBERTa_training/miniBERTa_1m_v2/gpt2/checkpoints_7/']
+checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_1m_v2/gpt2/checkpoints_7/']
 for (identifier, num_layers), ckpnts in itertools.product([
     ('gpt2-neox-pos_learned-1M-v2', 12,)], np.arange(250,4000+250,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
@@ -1314,7 +1314,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
     ))
 
 # checkpoints from mistral training
-mistral_root_=[ '/om/user/ehoseini/MyData/mistral/caprica-gpt2-small-x81']
+mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/caprica-gpt2-small-x81']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
     ('mistral-caprica-gpt2-small-x81', 12),], list(np.concatenate([np.asarray([40,400,4000]),np.arange(0,410000,10000)]))):
@@ -1326,7 +1326,7 @@ for (identifier, num_layers), ckpoint in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
-mistral_root_=[ '/om/user/ehoseini/MyData/mistral/expanse-gpt2-small-x777']
+mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/expanse-gpt2-small-x777']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
     ('expanse-gpt2-small-x777', 12),], list(np.asarray([0,40,400,4000,40000,400000]))):
@@ -1338,7 +1338,7 @@ for (identifier, num_layers), ckpoint in itertools.product([
         layers=('drop',) + tuple(f'encoder.h.{i}' for i in range(num_layers))
     ))
 
-mistral_root_=[ '/om/user/ehoseini/MyData/mistral/alias-gpt2-small-x21']
+mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/alias-gpt2-small-x21']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
     ('alias-gpt2-small-x21', 12),], list(np.asarray([0,40,400,4000,40000,400000]))):
@@ -1388,7 +1388,7 @@ for (identifier, num_layers), ckpoint in itertools.product([
     ))
 
 
-nyu_root_=[ '/om/user/ehoseini/MyData/nyu-roberta/']
+nyu_root_=[ '/om/weka/evlab/ehoseini/MyData/nyu-roberta/']
 for identifier, num_layers in [
     ('nyu-mll/roberta-base-1B-1', 12),
     ('nyu-mll/roberta-base-1B-2', 12),
