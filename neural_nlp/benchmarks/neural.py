@@ -45,7 +45,7 @@ elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
     PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
-    DsParametricfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
 
 _logger = logging.getLogger(__name__)
