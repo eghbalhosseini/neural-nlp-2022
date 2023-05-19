@@ -19,7 +19,7 @@ from brainscore.metrics.cka import CKACrossValidated
 from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
 from brainscore.metrics.transformations import CartesianProduct, CrossValidation, apply_aggregate
 from brainscore.utils import LazyLoad
-from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling, v,ci_error,manual_merge,_coords_match
+from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling, v,ci_error,manual_merge,_coords_match, FewSubjectExtrapolation
 from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.ecog import load_Fedorenko2016
 from neural_nlp.neural_data.mgh_ecog import load_MghMockLang
@@ -1633,6 +1633,77 @@ class ANNSet1ECoGEncoding(_ANNSet1ECoGBenchmark):
     def ceiling(self):
         return super(ANNSet1ECoGEncoding, self).ceiling
 
+class ANNSetECoGSentenceEncoding(_ANNSet1ECoGBenchmark):
+    def __init__(self,identifier):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimuli_id',
+                                                                       stratification_coord=None))
+
+        super(ANNSetECoGSentenceEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
+        
+    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=True):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{self._target_assembly.identifier}-ave-{average_sentence}-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+            for column in copy_columns:
+                sentence_activations[column] = ('presentation', part_stimuli[column])
+
+            activations.append(sentence_activations)
+
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        # assert that the order of model_activations is the same as stimulus_set
+        assert np.all(model_activations[reset_column].values == stimulus_set[reset_column].values)
+        # idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
+        #       [int(s[reset_column].values) for s in activations]]
+        # assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        # model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
+
+    def __call__(self,candidate, *args, **kwargs):
+        # make sure word_ids are in increasing order and the same between target_assembly and model_activations
+        stimulus_set = self._target_assembly['stimulus']
+        # stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['stimuli_id', 'word_id'],
+                                             average_sentence=False)
+        model_activations = model_activations.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        # group model activation by stimulus_id and average over word_id
+        model_activations = model_activations.groupby('stimulus_id').mean('presentation')
+        target_assembly = self._target_assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        # do the same with the target_assembly
+        target_assembly = target_assembly.groupby('stimulus_id').mean('presentation')
+        target_assembly = target_assembly.rename({'stimulus_id': 'presentation'})
+        target_assembly = target_assembly.assign_coords(
+            {'stimuli_id': ('presentation', target_assembly.presentation.values)})
+        model_activations = model_activations.rename({'stimulus_id': 'presentation'})
+        model_activations = model_activations.assign_coords(
+            {'stimuli_id': ('presentation', model_activations.presentation.values)})
+        assert np.all(model_activations['stimuli_id'].values == target_assembly['stimuli_id'].values)
+        _logger.info('Scoring across electrodes')
+        score = self.apply_metric(model_activations, target_assembly)
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
+
+        score = aggregate_neuroid_scores(raw_neuroids, 'subject')
+        score.attrs['raw'] = raw_neuroids
+        score.attrs['ceiling'] = 1
+        score.attrs['description'] = "per-neuroid no-ceiling-normalized score"
+        return score
+
+
 class _LanglocECOG:
     """
     data source:
@@ -1645,7 +1716,7 @@ class _LanglocECOG:
         self._metric = metric
         self._average_sentence = False
         self._ceiler = ExtrapolationCeiling(subject_column='subject')
-        self._few_sub_ceiler=self.FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',num_bootstraps=100,post_process=None)
+        self._few_sub_ceiler= FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',num_bootstraps=100,post_process=None)
 
 
     @property
@@ -1836,7 +1907,72 @@ class LangLocECoGSampleEncoding(_LanglocECOG):
         super(LangLocECoGSampleEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                     version='HighGamma_bipolar_gauss_zscore_subs_3', threshold=0.05)
 
+class LangLocECoGSentenceEncoding(_LanglocECOG):
+    def __init__(self, identifier, **kwargs):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # sentence
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # sentence
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                                                       split_coord='stimuli_id',
+                                                                       stratification_coord=None))
+        super(LangLocECoGSentenceEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
+                                                    version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.05)
 
+    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=True):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{self._target_assembly.identifier}-ave-{average_sentence}-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+            for column in copy_columns:
+                sentence_activations[column] = ('presentation', part_stimuli[column])
+
+            activations.append(sentence_activations)
+
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        # assert that the order of model_activations is the same as stimulus_set
+        assert np.all(model_activations[reset_column].values == stimulus_set[reset_column].values)
+        # idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
+        #       [int(s[reset_column].values) for s in activations]]
+        # assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        # model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
+
+    def __call__(self, candidate, *args, **kwargs):
+        stimulus_set = self._target_assembly['stimulus']
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['stimuli_id', 'word_id'],
+                                             average_sentence=False)
+        model_activations = model_activations.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        model_activations = model_activations.groupby('stimulus_id').mean('presentation')
+        target_assembly = self._target_assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        target_assembly = target_assembly.groupby('stimulus_id').mean('presentation')
+        target_assembly = target_assembly.rename({'stimulus_id': 'presentation'})
+        target_assembly = target_assembly.assign_coords(
+            {'stimuli_id': ('presentation', target_assembly.presentation.values)})
+        model_activations = model_activations.rename({'stimulus_id': 'presentation'})
+        model_activations = model_activations.assign_coords(
+            {'stimuli_id': ('presentation', model_activations.presentation.values)})
+        _logger.info('Scoring across electrodes')
+        assert np.all(model_activations['stimuli_id'].values == target_assembly['stimuli_id'].values)
+        _logger.info('Scoring across electrodes')
+        score = self.apply_metric(model_activations, target_assembly)
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
+        score = aggregate_neuroid_scores(raw_neuroids, 'subject')
+        score.attrs['raw'] = raw_neuroids
+        score.attrs['ceiling'] = 1
+        score.attrs['description'] = "per-neuroid no-ceiling-normalized score"
+        return score
 def aggregate(score, combine_layers=True):
     if hasattr(score, 'experiment') and score['experiment'].ndim > 0:
         score = score.mean('experiment')
@@ -1923,7 +2059,9 @@ benchmark_pool = [
     ('ANNSet1fMRISentence-encoding', ANNSet1fMRISentenceEncoding),
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
+    ('ANNSet1ECoG-Sentence-encoding', ANNSetECoGSentenceEncoding),
     ('LangLocECoG-encoding', LangLocECoGEncoding),
+    ('LangLocECoG-sentence-encoding', LangLocECoGSentenceEncoding),
     ('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
     ('LangLocECoGSample-encoding', LangLocECoGSampleEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
