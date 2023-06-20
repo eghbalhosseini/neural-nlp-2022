@@ -16,7 +16,7 @@ from brainscore.benchmarks import Benchmark
 from brainscore.metrics import Score
 from brainscore.metrics.rdm import RDM, RDMSimilarity, RDMCrossValidated
 from brainscore.metrics.cka import CKACrossValidated
-from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
+from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation,XarrayRegression,pls_regression
 from brainscore.metrics.transformations import CartesianProduct, CrossValidation, apply_aggregate
 from brainscore.utils import LazyLoad
 from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling, v,ci_error,manual_merge,_coords_match, FewSubjectExtrapolation
@@ -35,6 +35,22 @@ import pickle, pathlib
 from pathlib import Path
 from brainio.assemblies import NeuroidAssembly
 from brainio.fetch import fullname
+from sklearn.linear_model import RidgeCV
+
+def rgcv_linear_regression(xarray_kwargs=None):
+    regression = RidgeCV(
+            alphas=[1e-3, 0.01, 0.1, 1, 10, 100])
+    xarray_kwargs = xarray_kwargs or {}
+    regression = XarrayRegression(regression, **xarray_kwargs)
+    return regression
+
+def rgcv_linear_pearsonr(*args, regression_kwargs=None, correlation_kwargs=None, **kwargs):
+    regression = rgcv_linear_regression(regression_kwargs or {})
+    correlation = pearsonr_correlation(correlation_kwargs or {})
+    return CrossRegressedCorrelation(
+            *args, regression=regression, correlation=correlation,
+            **kwargs)
+
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
@@ -1288,7 +1304,67 @@ class DsParametricfMRIRandEncoding(DsParametricfMRIEncoding):
     def _load_assembly(self,version='random'):
         return super()._load_assembly(version='random')
 
+class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
+    """
+    data source:
+    """
 
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(DsParametricfMRIRidgeEncoding, self).__init__(metric=metric, **kwargs)
+
+
+    # @property
+    # def ceiling(self):
+    #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+    #     return ceiling_val
+
+
+
+class DsParametricfMRIMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='max'):
+        return super()._load_assembly(version='max')
+
+class DsParametricfMRIMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='min'):
+        return super()._load_assembly(version='min')
+
+class DsParametricfMRIRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='random'):
+        return super()._load_assembly(version='random')
+
+class DsParametricfMRIPLSEncoding(_DsParametricfMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=pls_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(DsParametricfMRIRidgeEncoding, self).__init__(metric=metric, **kwargs)
+
+
+    # @property
+    # def ceiling(self):
+    #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+    #     return ceiling_val
+
+class DsParametricfMRIMaxPLSEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='max'):
+        return super()._load_assembly(version='max')
+
+class DsParametricfMRIMinPLSEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='min'):
+        return super()._load_assembly(version='min')
+
+class DsParametricfMRIRandPLSEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='random'):
+        return super()._load_assembly(version='random')
 class _Fedorenko2016:
     """
     data source:
@@ -2051,6 +2127,14 @@ benchmark_pool = [
     ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
+
+    ('DsParametricfMRI-max-RidgeEncoding', DsParametricfMRIMaxRidgeEncoding),
+    ('DsParametricfMRI-min-RidgeEncoding', DsParametricfMRIMinRidgeEncoding),
+    ('DsParametricfMRI-rand-RidgeEncoding', DsParametricfMRIRandRidgeEncoding),
+
+    ('DsParametricfMRI-max-PLSEncoding', DsParametricfMRIMaxPLSEncoding),
+    ('DsParametricfMRI-min-PLSEncoding', DsParametricfMRIMinPLSEncoding),
+    ('DsParametricfMRI-rand-PLSEncoding', DsParametricfMRIRandPLSEncoding),
 
     ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
     ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),

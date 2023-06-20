@@ -21,7 +21,7 @@ elif user=='ehoseini':
 
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
-    benchmark_name="ANNSet1ECoG-Sentence-encoding"
+    benchmark_name="DsParametricfMRI-max-PLSEncoding"
     #benchmark_name="LangLocECoG-sentence-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
@@ -29,7 +29,7 @@ if __name__ =='__main__':
     #benchmark_name ="Fedorenko2016v3-encoding"
     #benchmark_name = 'LangLocECoGv2-encoding'
     #model_name="gpt2"
-    model_name="gpt2-medium"
+    model_name="gpt2"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name
