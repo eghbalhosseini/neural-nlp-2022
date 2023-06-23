@@ -1164,7 +1164,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
             vox_corr_vec = (assembly.repetition_corr > -np.inf).values
         vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
         assembly = assembly.sel(neuroid=vox_selection)
-        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version+ f'_thr_{threshold}'
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version #+ f'_thr_{threshold}'
         return assembly
         
         # UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
@@ -2126,9 +2126,9 @@ benchmark_pool = [
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
 
-    ('DsParametricfMRI-max-RidgeEncoding', DsParametricfMRIMaxRidgeEncoding),
-    ('DsParametricfMRI-min-RidgeEncoding', DsParametricfMRIMinRidgeEncoding),
-    ('DsParametricfMRI-rand-RidgeEncoding', DsParametricfMRIRandRidgeEncoding),
+    ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxRidgeEncoding),
+    ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinRidgeEncoding),
+    ('DsParametricfMRI_v1-rand-RidgeEncoding', DsParametricfMRIRandRidgeEncoding),
 
     ('DsParametricfMRI-max-PLSEncoding', DsParametricfMRIMaxPLSEncoding),
     ('DsParametricfMRI-min-PLSEncoding', DsParametricfMRIMinPLSEncoding),
