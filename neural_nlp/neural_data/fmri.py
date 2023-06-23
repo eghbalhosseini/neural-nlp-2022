@@ -160,7 +160,8 @@ def load_Pereira2018_Blank(version='base'):
         assemblies.append(assembly)
 
     _logger.debug(f"Merging {len(assemblies)} assemblies")
-    assembly = merge_data_arrays(assemblies)
+    #assembly = merge_data_arrays(assemblies)
+    assembly = xr.merge(assemblies)
     assembly.attrs['version'] = version
 
     _logger.debug("Creating StimulusSet")
@@ -222,7 +223,8 @@ def load_Pereira2018():
                     stimuli[experiment_filename][copy_coord] = assembly[copy_coord].values
 
     _logger.debug(f"Merging {len(assemblies)} assemblies")
-    assembly = merge_data_arrays(assemblies)
+    #assembly = merge_data_arrays(assemblies)
+    assembly=xr.merge(assemblies)
 
     _logger.debug("Creating StimulusSet")
     combined_stimuli = {}

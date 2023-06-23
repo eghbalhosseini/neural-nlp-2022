@@ -24,7 +24,7 @@ from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.ecog import load_Fedorenko2016
 from neural_nlp.neural_data.mgh_ecog import load_MghMockLang
 from neural_nlp.neural_data.fmri import load_voxels, load_rdm_sentences, \
-    load_Pereira2018_Blank
+    load_Pereira2018_Blank, load_Pereira2018
 from neural_nlp.stimuli import load_stimuli, StimulusSet
 from neural_nlp.utils import ordered_set
 from result_caching import store
@@ -1096,9 +1096,9 @@ class _DsParametricfMRIBenchmark(Benchmark):
         https://www.nature.com/articles/s41467-018-03068-4
     """
 
-    def __init__(self, identifier, metric,version='max'):
+    def __init__(self, identifier, metric,version='max',threshold=90):
         self._identifier = identifier
-        assembly = self._load_assembly(version=version)
+        assembly = self._load_assembly(version=version,threshold=threshold)
         self._target_assembly = assembly
         self._single_metric = metric
         # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
@@ -1147,8 +1147,8 @@ class _DsParametricfMRIBenchmark(Benchmark):
         return cross_scores.mean(['experiment', 'atlas'])
 
     # @load_s3(key='Pereira2018')
-    def _load_assembly(self,version='max'):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_80_V2.pkl')
+    def _load_assembly(self,version='max',threshold=90):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (True, .95), 'visual': (True, .95)}
         vox_corr = {'language': (True, .1), 'auditory': (True, .1), 'visual': (True, .1)}
@@ -1164,7 +1164,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
             vox_corr_vec = (assembly.repetition_corr > -np.inf).values
         vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
         assembly = assembly.sel(neuroid=vox_selection)
-        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version+ f'_thr_{threshold}'
         return assembly
         
         # UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
@@ -1293,16 +1293,16 @@ class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
     #     return ceiling_val
     
 class DsParametricfMRIMaxEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='max'):
-        return super()._load_assembly(version='max')
+    def _load_assembly(self,version='max',threshold=90):
+        return super()._load_assembly(version='max',threshold=90)
 
 class DsParametricfMRIMinEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='min'):
-        return super()._load_assembly(version='min')
+    def _load_assembly(self,version='min',threshold=90):
+        return super()._load_assembly(version='min',threshold=90)
 
 class DsParametricfMRIRandEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='random'):
-        return super()._load_assembly(version='random')
+    def _load_assembly(self,version='random',threshold=90):
+        return super()._load_assembly(version='random',threshold=90)
 
 class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     """
@@ -1322,19 +1322,17 @@ class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
     #     return ceiling_val
 
-
-
 class DsParametricfMRIMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
-    def _load_assembly(self,version='max'):
-        return super()._load_assembly(version='max')
+    def _load_assembly(self,version='max',threshold=90):
+        return super()._load_assembly(version='max',threshold=90)
 
 class DsParametricfMRIMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
-    def _load_assembly(self,version='min'):
-        return super()._load_assembly(version='min')
+    def _load_assembly(self,version='min',threshold=90):
+        return super()._load_assembly(version='min',threshold=90)
 
 class DsParametricfMRIRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
-    def _load_assembly(self,version='random'):
-        return super()._load_assembly(version='random')
+    def _load_assembly(self,version='random',threshold=90):
+        return super()._load_assembly(version='random',threshold=90)
 
 class DsParametricfMRIPLSEncoding(_DsParametricfMRIBenchmark):
     """
