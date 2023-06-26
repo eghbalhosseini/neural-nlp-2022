@@ -1150,8 +1150,8 @@ class _DsParametricfMRIBenchmark(Benchmark):
     def _load_assembly(self,version='max',threshold=90):
         assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
-        vox_reliability = {'language': (False, .95), 'auditory': (True, .95), 'visual': (True, .95)}
-        vox_corr = {'language': (True, .1), 'auditory': (True, .1), 'visual': (True, .1)}
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
         assembly = assembly[assembly['stim_group'] == version]
         if vox_reliability['language'][0]:
             vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
