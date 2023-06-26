@@ -1322,9 +1322,41 @@ class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
     #     return ceiling_val
 
-class DsParametricfMRIMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
+class DsParametricfMRIMaxV1RidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='max',threshold=90):
         return super()._load_assembly(version='max',threshold=90)
+
+class DsParametricfMRIMaxV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='max',threshold=80):
+        return super()._load_assembly(version='max',threshold=80)
+
+class DsParametricfMRIMaxV3RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='max',threshold=70):
+        return super()._load_assembly(version='max',threshold=70)
+
+class DsParametricfMRIMinV1RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='min',threshold=90):
+        return super()._load_assembly(version='min',threshold=90)
+
+class DsParametricfMRIMinV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='min',threshold=80):
+        return super()._load_assembly(version='min',threshold=80)
+
+class DsParametricfMRIMinV3RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='min',threshold=70):
+        return super()._load_assembly(version='min',threshold=70)
+
+class DsParametricfMRIRandV1RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='random',threshold=90):
+        return super()._load_assembly(version='random',threshold=90)
+
+class DsParametricfMRIRandV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='random',threshold=80):
+        return super()._load_assembly(version='random',threshold=80)
+
+class DsParametricfMRIRandV3RidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self,version='random',threshold=70):
+        return super()._load_assembly(version='random',threshold=70)
 
 class DsParametricfMRIMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='min',threshold=90):
@@ -2126,9 +2158,17 @@ benchmark_pool = [
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
 
-    ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxRidgeEncoding),
-    ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinRidgeEncoding),
-    ('DsParametricfMRI_v1-rand-RidgeEncoding', DsParametricfMRIRandRidgeEncoding),
+    ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxV1RidgeEncoding),
+    ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinV1RidgeEncoding),
+    ('DsParametricfMRI_v1-rand-RidgeEncoding', DsParametricfMRIRandV1RidgeEncoding),
+
+    ('DsParametricfMRI_v2-max-RidgeEncoding', DsParametricfMRIMaxV2RidgeEncoding),
+    ('DsParametricfMRI_v2-min-RidgeEncoding', DsParametricfMRIMinV2RidgeEncoding),
+    ('DsParametricfMRI_v2-rand-RidgeEncoding', DsParametricfMRIRandV2RidgeEncoding),
+
+    ('DsParametricfMRI_v3-max-RidgeEncoding', DsParametricfMRIMaxV3RidgeEncoding),
+    ('DsParametricfMRI_v3-min-RidgeEncoding', DsParametricfMRIMinV3RidgeEncoding),
+    ('DsParametricfMRI_v3-rand-RidgeEncoding', DsParametricfMRIRandV3RidgeEncoding),
 
     ('DsParametricfMRI-max-PLSEncoding', DsParametricfMRIMaxPLSEncoding),
     ('DsParametricfMRI-min-PLSEncoding', DsParametricfMRIMinPLSEncoding),
@@ -2162,5 +2202,6 @@ for sentence_num in range(1, 10, 2):
     benchmark_pool.append((f'Blank2014sentence{sentence_num}fROI-encoding',
                            lambda *args, sentence_num=sentence_num, **kwargs:
                            Blank2014SentencefROIEncoding(*args, sentence_num=sentence_num, **kwargs)))
+
 benchmark_pool = {identifier: LazyLoad(lambda identifier=identifier, ctr=ctr: ctr(identifier=identifier))
                   for identifier, ctr in benchmark_pool}
