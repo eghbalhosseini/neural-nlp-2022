@@ -1283,7 +1283,7 @@ class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
         metric = CrossRegressedCorrelation(
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricfMRIEncoding, self).__init__(metric=metric, **kwargs)
 
 
