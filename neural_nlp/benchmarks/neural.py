@@ -1136,6 +1136,25 @@ class _DsParametricfMRIBenchmark(Benchmark):
 
         return model_activations
 
+    def _listen_to(self, candidate, stimulus_set, reset_column='stimulus_passage_index', average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        Operates on a sentence-based `stimulus_set`.
+        """
+        activations = []
+        for story in ordered_set(stimulus_set[reset_column].values):
+            story_stimuli = stimulus_set[stimulus_set[reset_column] == story].values
+            story_stimuli.name = f"{stimulus_set.name}-{story}"
+            story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
+            activations.append(story_activations)
+        model_activations = merge_data_arrays(activations)
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+               itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+        return model_activations
+
     def _metric(self, source_assembly, target_assembly):
         """ for ceiling compute """
         cross_scores = self._cross(target_assembly, apply=
@@ -1214,6 +1233,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
         stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
 
         model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stim_group_id')
+        #model_activations = self._listen_to(candidate, stimulus_set, reset_column='stimulus_passage_index')
         assert set(model_activations['stim_group_id'].values) == set(self._target_assembly['stim_group_id'].values)
         # add a new cooordinate called stimulus_id
         model_activations = model_activations.assign_coords({'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
@@ -1395,6 +1415,265 @@ class DsParametricfMRIMinPLSEncoding(DsParametricfMRIRidgeEncoding):
 class DsParametricfMRIRandPLSEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='random'):
         return super()._load_assembly(version='random')
+
+class _Pereira2023audBenchmark(Benchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4
+    """
+
+    def __init__(self, identifier, metric,version='sent',reset_column='sentence_id', threshold=90):
+        self._identifier = identifier
+        assembly = self._load_assembly( threshold=threshold,version=version)
+        self._target_assembly = assembly
+        self._single_metric = metric
+        self._reset_column = reset_column
+        # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
+        self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values,
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{self._target_assembly.stimuli_group}-{reset_column}-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1, :]
+            # for column in copy_columns:
+            #    sentence_activations[column] = ('presentation', part_stimuli[column])
+            activations.append(sentence_activations)
+
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
+               [int(s[reset_column].values) for s in activations]]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
+    
+    def _listen_to(self, candidate, stimulus_set, reset_column='stimulus_passage_index', average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        Operates on a sentence-based `stimulus_set`.
+        """
+        activations = []
+        for story in ordered_set(stimulus_set[reset_column].values):
+            story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
+            story_stimuli.name = f"{stimulus_set.name}-{story}"
+            story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
+            activations.append(story_activations)
+        model_activations = merge_data_arrays(activations)
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+               itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+        return model_activations
+
+    def _metric(self, source_assembly, target_assembly):
+        """ for ceiling compute """
+        cross_scores = self._cross(target_assembly, apply=
+        lambda cross_assembly: self._apply_cross(source_assembly, cross_assembly))
+        score = self._average_cross_scores(cross_scores)
+        return score
+
+    def _average_cross_scores(self, cross_scores):
+        return cross_scores.mean(['experiment', 'atlas'])
+
+    # @load_s3(key='Pereira2018')
+    def _load_assembly(self,version='sent', threshold=90):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = f'Pereira2023aud_{version}'
+        # combine simulus_passage_category and stimulus_passage_index to create a unique stimulus_id using a for loop
+        stimulus_passage_category_id = [f'{assembly["stimulus_passage_category"].values[i]}_{assembly["stimulus_passage_index"].values[i]}' for i in range(len(assembly['stimulus_passage_category'].values))]
+        # use assign coords to add the new stimulus_passage_category_id to presentation diemsnions to the assembly
+        assembly = assembly.assign_coords(stimulus_passage_category_id=('presentation', stimulus_passage_category_id))
+
+        # construct stimulus set from the assembly
+        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stimulus_passage_category': assembly['stimulus_passage_category'].values,
+                                    'stimulus_passage_index': assembly['stimulus_passage_index'].values,
+                                    'stimulus_story': assembly['stimulus_story'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'experiment': assembly['experiment'].values,
+                                    'stumulus': assembly['stimulus'].values,
+                                    'sentence_id': assembly['stimulus_id'].values,
+                                    'stimulus_passage_category_id': assembly['stimulus_passage_category_id'].values})
+        # attach stimulus set as an attribute to the assembly
+        # add name to stimulus set
+        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
+        assembly.attrs['stimulus_set'] = stimulus_set                   
+        return assembly
+
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        _logger.warning(f'extracting activation on {self._reset_column}')
+            # #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+            # #                                     reset_column='stimulus_id')
+        model_activations = listen_to(candidate, stimulus_set,reset_column=self._reset_column)
+        #model_activations = self._get_model_activations(candidate)
+
+        # make sure model_activations and target_assembly have the same order of stimuli
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
+
+    def _apply_cross(self, source_assembly, cross_assembly):
+        cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
+        source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
+        assert not np.isnan(cross_assembly).any()
+        source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
+                                                            for stimulus_id in source_assembly['stimulus_id'].values]}]
+        return self._single_metric(source_assembly, cross_assembly)
+
+    @property
+    def ceiling(self):
+        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    def _aggregate_ceiling(self, neuroid_scores, ceiling, subject_column='subject'):
+        aggregate_raw = self._aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+        score = consistency(aggregate_raw, ceiling)
+        score.attrs['raw'] = aggregate_raw
+        score.attrs['ceiling'] = ceiling
+        score.attrs['description'] = "ceiling-normalized score"
+        return score
+
+    def _aggregate_no_ceiling(self, neuroid_scores, subject_column='subject'):
+        aggregate_raw = self._aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+        score = aggregate_raw
+        score.attrs['description'] = "no_ceiling-normalized score"
+        return score
+
+    def _aggregate_neuroid_scores(self, neuroid_scores, subject_column):
+        subject_scores = neuroid_scores.groupby(subject_column).median()
+        center = subject_scores.median(subject_column).values
+        subject_values = np.nan_to_num(subject_scores.values,
+                                       nan=0)  # mad cannot deal with all-nan in one axis, treat as 0
+        subject_axis = subject_scores.dims.index(subject_scores[subject_column].dims[0])
+        error = median_absolute_deviation(subject_values, axis=subject_axis)
+        # score = Score([center, error], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score = Score([float(center), float(error)], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score.attrs['raw'] = neuroid_scores
+        score.attrs['description'] = "score aggregated by taking median of neuroids per subject, " \
+                                     "then median of subject scores"
+        return score
+
+class Pereira2023audRidgeEncoding(_Pereira2023audBenchmark):
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(Pereira2023audRidgeEncoding, self).__init__(metric=metric, **kwargs)
+
+
+class Pereira2023audV2RidgeEncoding(_Pereira2023audBenchmark):
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(Pereira2023audRidgeEncoding, self).__init__(metric=metric, **kwargs)
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        _logger.warning(f'extracting activation on {self._reset_column}')
+            # #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+            # #                                     reset_column='stimulus_id')
+        model_activations = read_words(candidate, stimulus_set,reset_column=self._reset_column)
+        #model_activations = self._get_model_activations(candidate)
+
+        # make sure model_activations and target_assembly have the same order of stimuli
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
+
+class Pereira2023audSentRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audSentRidgeEncoding, self).__init__(reset_column='sentence_id',**kwargs)
+    def _load_assembly(self,version='sent',threshold=90):
+        return super()._load_assembly(version='sent',threshold=90)
+
+# class Pereira2023audPassRidgeEncoding(Pereira2023audRidgeEncoding):
+#     def _load_assembly(self,version='pass',threshold=90):
+#         return super()._load_assembly(version='pass',threshold=90)
+    
+class Pereira2023audPassPassageRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audPassPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
+    def _load_assembly(self,version='pass',threshold=90):
+        return super()._load_assembly(version='pass',threshold=90)
+    
+    #def _get_model_activations(self, candidate,reset_column='stimulus_passage_category_id',copy_columns=['stimulus_id']):
+    #    return super()._get_model_activations(candidate,reset_column='stimulus_passage_category_id',copy_columns=['stimulus_id'])
+
+
+class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audPassSentenceRidgeEncoding, self).__init__(reset_column='sentence_id',**kwargs)
+    def _load_assembly(self, version='pass', threshold=90):
+        return super()._load_assembly(version='pass', threshold=90)
+
+    def _get_model_activations(self, candidate, reset_column='sentence_id',
+                               copy_columns=['sentence_id']):
+        return super()._get_model_activations(candidate, reset_column='sentence_id',
+                                              copy_columns=['stimulus_id'])
+
+
 class _Fedorenko2016:
     """
     data source:
@@ -2154,6 +2433,9 @@ benchmark_pool = [
     ('Pereira2018-max-V2-encoding', PereiraSamplerMaxV2Encoding),
     ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
     ('Pereira2018-rand-V2-encoding', PereiraSamplerRandV2Encoding),
+    ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
+    ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
+    ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
     ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),

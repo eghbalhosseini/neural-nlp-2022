@@ -21,7 +21,9 @@ elif user=='ehoseini':
 
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
-    benchmark_name="DsParametricfMRI_v1-max-RidgeEncoding"
+    #benchmark_name="Pereira2023aud-pass-passage-RidgeEncoding"
+    benchmark_name="Pereira2023aud-pass-passage-RidgeEncoding"
+    #benchmark_name="Pereira2018-encoding"
     #benchmark_name="LangLocECoG-sentence-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
