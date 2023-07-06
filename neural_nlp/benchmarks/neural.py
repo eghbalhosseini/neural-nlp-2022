@@ -1673,6 +1673,27 @@ class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
         return super()._get_model_activations(candidate, reset_column='sentence_id',
                                               copy_columns=['stimulus_id'])
 
+class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audSentSentenceRidgeEncoding, self).__init__(reset_column='stim_name',**kwargs)
+    def _load_assembly(self, version='sent', threshold=90):
+        return super()._load_assembly(version='sent', threshold=90)
+
+    # def _get_model_activations(self, candidate, reset_column='sentence_id',
+    #                            copy_columns=['sentence_id']):
+    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    #                                           copy_columns=['stimulus_id'])
+
+class Pereira2023audSentPassageRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audSentPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
+    def _load_assembly(self, version='sent', threshold=90):
+        return super()._load_assembly(version='sent', threshold=90)
+
+    # def _get_model_activations(self, candidate, reset_column='sentence_id',
+    #                            copy_columns=['sentence_id']):
+    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    #                                           copy_columns=['stimulus_id'])
 
 class _Fedorenko2016:
     """
@@ -2436,6 +2457,8 @@ benchmark_pool = [
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
+    ('Pereira2023aud-sent-sentence-RidgeEncoding', Pereira2023audSentSentenceRidgeEncoding),
+    ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
