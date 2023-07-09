@@ -36,7 +36,7 @@ from pathlib import Path
 from brainio.assemblies import NeuroidAssembly
 from brainio.fetch import fullname
 from sklearn.linear_model import RidgeCV
-
+import scipy.stats as stats
 def rgcv_linear_regression(xarray_kwargs=None):
     regression = RidgeCV(
             alphas=[1e-3, 0.01, 0.1, 1, 10, 100])
@@ -657,6 +657,50 @@ class PereiraSamplerMinV2Encoding(PereiraSamplerV2Encoding):
 class PereiraSamplerRandV2Encoding(PereiraSamplerV2Encoding):
     def _load_assembly(self,version='rand'):
         return super()._load_assembly(version='rand')
+
+class PereiraNormalizedEncoding(_PereiraBenchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(PereiraNormalizedEncoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='zscored'):
+        assembly=xr.load_dataarray(f'{PEREIRA2018_SAMPLE}/Pereira2018.nc')
+        assembly_zs=[]
+        for exp_id,exp in assembly.groupby('experiment'):
+            # zscore indivdual neuroids in exp across presentation dimension
+            a=stats.zscore(exp.values, axis=0)
+            exp_zs=exp.copy(data=a)
+            assembly_zs.append(exp_zs)
+        assembly_zs=xr.concat(assembly_zs,dim='presentation')
+        # select only langauge atlas
+        language_atlas=assembly_zs.atlas.values=='language'
+        assembly_zs=assembly_zs.sel(neuroid=language_atlas)
+        # copy over the attributes from assembly
+        assembly_zs.attrs=assembly.attrs
+        # explicitly load the stimulus set
+        stimulus_set_file=assembly_zs.attrs['stimulus_set'].replace('s3:',f'{PEREIRA2018_SAMPLE}/')
+        stimulus_set=pd.read_csv(stimulus_set_file)
+
+        assembly_zs.attrs['stimulus_set']=StimulusSet(stimulus_set)
+        assembly_zs.attrs['stimulus_set'].name='Pereira2018'
+        assembly_zs.attrs['version']='zscored'
+        assembly_zs=NeuroidAssembly(assembly_zs)
+        return assembly_zs
+
+    @property
+    @load_s3(key='Pereira2018-encoding-ceiling')
+    def ceiling(self):
+        return super(PereiraNormalizedEncoding, self).ceiling
+
 
 class _PereiraSubjectWise(_PereiraBenchmark):
     def __init__(self, **kwargs):
@@ -2454,6 +2498,7 @@ benchmark_pool = [
     ('Pereira2018-max-V2-encoding', PereiraSamplerMaxV2Encoding),
     ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
     ('Pereira2018-rand-V2-encoding', PereiraSamplerRandV2Encoding),
+    ('Pereira2018-norm-encoding',PereiraNormalizedEncoding),
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
