@@ -721,6 +721,33 @@ class PereiraNormalizedSentenceEncoding(PereiraNormalizedEncoding):
         return score
 
 
+class PereiraNormalizedEncoding_V2(PereiraNormalizedEncoding):
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = listen_to(candidate, stimulus_set)
+        model_activations_zs=[]
+        for exp_id,exp in model_activations.groupby('experiment'):
+            # zscore indivdual neuroids in exp across presentation dimension
+            a=stats.zscore(exp.values, axis=0)
+            exp_zs=exp.copy(data=a)
+            model_activations_zs.append(exp_zs)
+        model_activations_zs=xr.concat(model_activations_zs,dim='presentation')
+        assert set(model_activations_zs['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations_zs, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split').mean('experiment'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        return score
+
 
 class _PereiraSubjectWise(_PereiraBenchmark):
     def __init__(self, **kwargs):
@@ -2519,6 +2546,7 @@ benchmark_pool = [
     ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
     ('Pereira2018-rand-V2-encoding', PereiraSamplerRandV2Encoding),
     ('Pereira2018-norm-encoding',PereiraNormalizedEncoding),
+    ('Pereira2018-norm-v2-encoding',PereiraNormalizedEncoding_V2),
     ('Pereira2018-norm-sentence-encoding',PereiraNormalizedSentenceEncoding),
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
