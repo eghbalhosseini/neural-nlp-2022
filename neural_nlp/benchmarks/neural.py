@@ -627,7 +627,6 @@ class PereiraSamplerV2Encoding(_PereiraBenchmark):
         Pereira et al., nature communications 2018
         https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
     """
-
     def __init__(self, **kwargs):
         metric = CrossRegressedCorrelation(
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
@@ -700,6 +699,27 @@ class PereiraNormalizedEncoding(_PereiraBenchmark):
     @load_s3(key='Pereira2018-encoding-ceiling')
     def ceiling(self):
         return super(PereiraNormalizedEncoding, self).ceiling
+
+class PereiraNormalizedSentenceEncoding(PereiraNormalizedEncoding):
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = listen_to(candidate, stimulus_set,reset_column='stimulus_id')
+        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split').mean('experiment'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        return score
+
 
 
 class _PereiraSubjectWise(_PereiraBenchmark):
@@ -2499,6 +2519,7 @@ benchmark_pool = [
     ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
     ('Pereira2018-rand-V2-encoding', PereiraSamplerRandV2Encoding),
     ('Pereira2018-norm-encoding',PereiraNormalizedEncoding),
+    ('Pereira2018-norm-sentence-encoding',PereiraNormalizedSentenceEncoding),
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
