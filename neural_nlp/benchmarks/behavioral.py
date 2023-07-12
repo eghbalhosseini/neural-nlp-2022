@@ -11,7 +11,7 @@ from brainio.assemblies import NeuroidAssembly
 from brainio.fetch import fullname
 from numpy.random.mtrand import RandomState
 from tqdm import tqdm
-
+import scipy.stats as stats
 from brainscore.benchmarks import Benchmark
 from brainscore.metrics import Score
 from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
@@ -331,11 +331,65 @@ class Futrell2018SentencesEncoding(Futrell2018Encoding):
         assembly = assembly[{'neuroid': [subject in keep_subjects for subject in assembly['subject_id'].values]}]
         return assembly
 
+class Futrell2018NormEncoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormEncoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=False,
+                                        split_coord='word', stratification_coord='sentence_id'))
+
+    def _load_assembly(self):
+        assembly = super(Futrell2018NormEncoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove=[]
+        for story_id, story in assembly.groupby('story_id'):
+            # do zscoring of stories along presentation dimension
+            a = stats.zscore(story.values, axis=0,nan_policy='omit')
+            # find columns with all nan values
+            nan_cols = np.where(np.all(np.isnan(story.values), axis=0))[0]
+            nan_cols_zs = np.where(np.all(np.isnan(a), axis=0))[0]
+            # make sure that the nan columns are the same
+            # find the set difference between nan_cols and nan_cols_zs
+            #assert(np.all(nan_cols == nan_cols_zs))
+            diff = set(nan_cols_zs) - set(nan_cols)
+            # add it to columns_to_remove
+            columns_to_remove.append(list(diff))
+            #np.nanmean(story.values,axis=0)
+            story_zs = story.copy(data=a)
+            assembly_zs.append(story_zs)
+        assembly_zs=xr.concat(assembly_zs,dim='presentation')
+        # combine columns_to_remove
+        columns_to_remove = list(set([item for sublist in columns_to_remove for item in sublist]))
+        # make a binary mask of columns to remove
+        mask = np.ones(assembly_zs.shape[1], dtype=bool)
+        mask[columns_to_remove] = False
+        # remove columns
+        assembly_zs = assembly_zs[:, mask]
+        # if there is a column in assembly_zs with all nan then drop it
+        # make sure assembly.values and assembly_zs.values have the same nan indices
+        #assert np.all(np.isnan(assembly.values) == np.isnan(assembly_zs.values))
+
+
+        return assembly_zs
 
 benchmark_pool = [
+
     ('Futrell2018-encoding', dict()),
     ('Futrell2018-unique_encoding', dict(unique_split_values=True)),
 ]
 benchmark_pool = {identifier: LazyLoad(
     lambda identifier=identifier, kwargs=kwargs: Futrell2018Encoding(identifier=identifier, **kwargs))
     for identifier, kwargs in benchmark_pool}
+
+additional_pool=[('Futrell2018-norm-encoding', Futrell2018NormEncoding),]
+
+additional_pool = {identifier: LazyLoad(lambda identifier=identifier, ctr=ctr: ctr(identifier=identifier))
+                  for identifier, ctr in additional_pool}
+
+benchmark_pool.update(additional_pool)
