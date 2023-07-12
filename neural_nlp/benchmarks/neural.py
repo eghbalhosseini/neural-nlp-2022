@@ -700,6 +700,7 @@ class PereiraNormalizedEncoding(_PereiraBenchmark):
     def ceiling(self):
         return super(PereiraNormalizedEncoding, self).ceiling
 
+
 class PereiraNormalizedSentenceEncoding(PereiraNormalizedEncoding):
     def __call__(self, candidate):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
@@ -1728,9 +1729,7 @@ class Pereira2023audPassPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     def _load_assembly(self,version='pass',threshold=90):
         return super()._load_assembly(version='pass',threshold=90)
     
-    #def _get_model_activations(self, candidate,reset_column='stimulus_passage_category_id',copy_columns=['stimulus_id']):
-    #    return super()._get_model_activations(candidate,reset_column='stimulus_passage_category_id',copy_columns=['stimulus_id'])
-
+   
 class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audPassSentenceRidgeEncoding, self).__init__(reset_column='sentence_id',**kwargs)
@@ -1763,6 +1762,43 @@ class Pereira2023audSentPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     #                            copy_columns=['sentence_id']):
     #     return super()._get_model_activations(candidate, reset_column='sentence_id',
     #                                           copy_columns=['stimulus_id'])
+
+class Pereira2023audPassPassageSampleRidgeEncoding(Pereira2023audRidgeEncoding):
+    def __init__(self, **kwargs):
+        super(Pereira2023audPassPassageSampleRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
+    def _load_assembly(self,version='pass',threshold=90):
+        return super()._load_assembly(version='pass',threshold=90)
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        _logger.warning(f'extracting activation on {self._reset_column}')
+            # #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+            # #                                     reset_column='stimulus_id')
+        model_activations = listen_to(candidate, stimulus_set,reset_column=self._reset_column)
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        # randomly select 80 stimulus_ids,
+        random_stimulus_ids = np.random.choice(model_activations['stimulus_id'].values, 80, replace=False)
+        # find location of random_stimulus_ids in model_activations.stimulus_id
+        random_stimulus_ids_idx = np.where(np.isin(model_activations['stimulus_id'].values, random_stimulus_ids))[0]
+        model_activation_sample=model_activations[random_stimulus_ids_idx,:]
+        target_assembly_sample=self._target_assembly[random_stimulus_ids_idx,:]
+        assert (model_activation_sample['stimulus_id'].values == target_assembly_sample['stimulus_id'].values).all()
+        
+
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(target_assembly_sample,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activation_sample, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
 
 class _Fedorenko2016:
     """
@@ -2649,6 +2685,7 @@ benchmark_pool = [
     ('Pereira2018-norm-sentence-encoding',PereiraNormalizedSentenceEncoding),
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
+    ('Pereira2023aud-pass-passage-sample-RidgeEncoding', Pereira2023audPassPassageSampleRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
     ('Pereira2023aud-sent-sentence-RidgeEncoding', Pereira2023audSentSentenceRidgeEncoding),
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
