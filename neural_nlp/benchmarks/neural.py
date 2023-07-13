@@ -30,8 +30,11 @@ from result_caching import store
 import xarray as xr
 import pandas as pd
 import getpass
+from scipy import stats
+from brainio.assemblies import NeuroidAssembly
+from brainio.fetch import fullname
+from sklearn.linear_model import RidgeCV
 
-    
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
     ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
