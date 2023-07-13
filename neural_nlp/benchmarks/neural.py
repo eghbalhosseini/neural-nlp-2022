@@ -31,13 +31,18 @@ import xarray as xr
 import pandas as pd
 import getpass
 
-if getpass.getuser()=='eghbalhosseini':
+    
+if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-    
-elif getpass.getuser()=='ehoseini':
-    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
-    
+    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
+    DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
 
+elif getpass.getuser() == 'ehoseini':
+    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
+    DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
 _logger = logging.getLogger(__name__)
 
@@ -544,6 +549,75 @@ class PereiraEncoding(_PereiraBenchmark):
     def ceiling(self):
         return super(PereiraEncoding, self).ceiling
 
+class PereiraNormalizedEncoding(_PereiraBenchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(PereiraNormalizedEncoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='zscored'):
+        assembly=xr.load_dataarray(f'{PEREIRA2018_SAMPLE}/Pereira2018.nc')
+        assembly_zs=[]
+        for exp_id,exp in assembly.groupby('experiment'):
+            # zscore indivdual neuroids in exp across presentation dimension
+            a=stats.zscore(exp.values, axis=0)
+            exp_zs=exp.copy(data=a)
+            assembly_zs.append(exp_zs)
+        assembly_zs=xr.concat(assembly_zs,dim='presentation')
+        # select only langauge atlas
+        language_atlas=assembly_zs.atlas.values=='language'
+        assembly_zs=assembly_zs.sel(neuroid=language_atlas)
+        # copy over the attributes from assembly
+        assembly_zs.attrs=assembly.attrs
+        # explicitly load the stimulus set
+        stimulus_set_file=assembly_zs.attrs['stimulus_set'].replace('s3:',f'{PEREIRA2018_SAMPLE}/')
+        stimulus_set=pd.read_csv(stimulus_set_file)
+
+        assembly_zs.attrs['stimulus_set']=StimulusSet(stimulus_set)
+        assembly_zs.attrs['stimulus_set'].name='Pereira2018'
+        assembly_zs.attrs['version']='zscored'
+        assembly_zs=NeuroidAssembly(assembly_zs)
+        return assembly_zs
+
+    @property
+    @load_s3(key='Pereira2018-encoding-ceiling')
+    def ceiling(self):
+        return super(PereiraNormalizedEncoding, self).ceiling
+
+class PereiraNormalizedEncoding_V2(PereiraNormalizedEncoding):
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = listen_to(candidate, stimulus_set)
+        model_activations_zs=[]
+        for exp_id,exp in model_activations.groupby('experiment'):
+            # zscore indivdual neuroids in exp across presentation dimension
+            a=stats.zscore(exp.values, axis=0)
+            exp_zs=exp.copy(data=a)
+            model_activations_zs.append(exp_zs)
+        model_activations_zs=xr.concat(model_activations_zs,dim='presentation')
+        assert set(model_activations_zs['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations_zs, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split').mean('experiment'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
+        return score
 
 class _ANNSet1fMRIBenchmark(Benchmark):
     """
@@ -1191,6 +1265,8 @@ def consistency(score, ceiling):
 benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
+    ('Pereira2018-norm-encoding', PereiraNormalizedEncoding),
+    ('Pereira2018-norm-v2-encoding', PereiraNormalizedEncoding_V2),
     ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
