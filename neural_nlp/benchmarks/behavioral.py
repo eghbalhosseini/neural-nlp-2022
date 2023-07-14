@@ -22,6 +22,23 @@ from neural_nlp.benchmarks.neural import read_words, consistency
 from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.naturalStories import load_naturalStories
 
+from scipy import stats
+from brainio.assemblies import NeuroidAssembly
+from brainio.fetch import fullname
+from sklearn.linear_model import RidgeCV
+
+if getpass.getuser() == 'eghbalhosseini':
+    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
+    DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+
+elif getpass.getuser() == 'ehoseini':
+    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
+    DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
+
 
 class Futrell2018Encoding(Benchmark):
     """
