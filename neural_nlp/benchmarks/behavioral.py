@@ -21,7 +21,7 @@ from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCe
 from neural_nlp.benchmarks.neural import read_words, consistency
 from neural_nlp.benchmarks.s3 import load_s3
 from neural_nlp.neural_data.naturalStories import load_naturalStories
-
+import getpass
 from scipy import stats
 from brainio.assemblies import NeuroidAssembly
 from brainio.fetch import fullname
