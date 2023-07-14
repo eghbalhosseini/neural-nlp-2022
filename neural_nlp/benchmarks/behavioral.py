@@ -331,6 +331,189 @@ class Futrell2018SentencesEncoding(Futrell2018Encoding):
         assembly = assembly[{'neuroid': [subject in keep_subjects for subject in assembly['subject_id'].values]}]
         return assembly
 
+class Futrell2018NormEncoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormEncoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=False,
+                                        split_coord='word', stratification_coord='sentence_id'))
+
+    def _load_assembly(self):
+        assembly = super(Futrell2018NormEncoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove=[]
+        for story_id, story in assembly.groupby('story_id'):
+            # do zscoring of stories along presentation dimension
+            a = stats.zscore(story.values, axis=0,nan_policy='omit')
+            # find columns with all nan values
+            nan_cols = np.where(np.all(np.isnan(story.values), axis=0))[0]
+            nan_cols_zs = np.where(np.all(np.isnan(a), axis=0))[0]
+            # make sure that the nan columns are the same
+            # find the set difference between nan_cols and nan_cols_zs
+            #assert(np.all(nan_cols == nan_cols_zs))
+            diff = set(nan_cols_zs) - set(nan_cols)
+            # add it to columns_to_remove
+            columns_to_remove.append(list(diff))
+            #np.nanmean(story.values,axis=0)
+            story_zs = story.copy(data=a)
+            assembly_zs.append(story_zs)
+        assembly_zs=xr.concat(assembly_zs,dim='presentation')
+        # combine columns_to_remove
+        columns_to_remove = list(set([item for sublist in columns_to_remove for item in sublist]))
+        # make a binary mask of columns to remove
+        mask = np.ones(assembly_zs.shape[1], dtype=bool)
+        mask[columns_to_remove] = False
+        # remove columns
+        assembly_zs = assembly_zs[:, mask]
+        # if there is a column in assembly_zs with all nan then drop it
+        # make sure assembly.values and assembly_zs.values have the same nan indices
+        #assert np.all(np.isnan(assembly.values) == np.isnan(assembly_zs.values))
+
+
+        return assembly_zs
+
+class Futrell2018NormV2Encoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormV2Encoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=False,
+                                        split_coord='word', stratification_coord='sentence_id'))
+
+    def _load_assembly(self):
+        assembly = super(Futrell2018NormV2Encoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove=[]
+        a = stats.zscore(assembly.values, axis=0, nan_policy='omit')
+        assembly_zs = assembly.copy(data=a)
+        return assembly_zs
+
+
+class Futrell2018NormV2SentencesEncoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormV2SentencesEncoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=True,
+                                        split_coord='sentence_id', stratification_coord=None))
+
+    def _load_assembly(self):
+        assembly = super(Futrell2018NormV2SentencesEncoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove = []
+        a = stats.zscore(assembly.values, axis=0, nan_policy='omit')
+        assembly_zs = assembly.copy(data=a)
+
+        def count_sentences(subject_assembly):
+            subject_assembly = subject_assembly.dropna('presentation')
+            num_sentences = len(np.unique(subject_assembly['sentence_id'].values))
+            num_words_per_story = subject_assembly.groupby('sentence_id').apply(
+                lambda sentence_assembly: xr.DataArray(len(sentence_assembly['presentation'])))
+            return xr.DataArray(num_sentences >= 5 and all(num_words_per_story >= 2))
+
+        keep_subjects = assembly_zs.groupby('subject_id').apply(count_sentences)
+        keep_subjects = keep_subjects[keep_subjects]['subject_id'].values
+        assembly_zs = assembly_zs[
+            {'neuroid': [subject in keep_subjects for subject in assembly_zs['subject_id'].values]}]
+        return assembly_zs
+
+
+class Futrell2018NormV2StoriesEncoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormV2StoriesEncoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=True,
+                                        split_coord='story_id', stratification_coord=None))
+
+    def _load_assembly(self):
+        # zscore the assembly
+        assembly = super(Futrell2018NormV2StoriesEncoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove = []
+        a = stats.zscore(assembly.values, axis=0, nan_policy='omit')
+        assembly_zs = assembly.copy(data=a)
+
+        # filter subjects that have done at least 5 stories. Otherwise, we cannot 5-fold cross-validate across stories
+        def count_stories(subject_assembly):
+            subject_assembly = subject_assembly.dropna('presentation')
+            num_stories = len(np.unique(subject_assembly['story_id'].values))
+            return xr.DataArray(num_stories)
+
+        subject_stories = assembly_zs.groupby('subject_id').apply(count_stories)
+        keep_subjects = subject_stories[subject_stories >= 5]['subject_id'].values
+        keep_subjects = set(keep_subjects) - {'A1I02VZ07MZB7F'}  # this subject only has one data point for story 8
+        assembly_zs = assembly_zs[
+            {'neuroid': [subject in keep_subjects for subject in assembly_zs['subject_id'].values]}]
+        return assembly_zs
+
+
+class Futrell2018NormStoriesEncoding(Futrell2018Encoding):
+    def __init__(self, *args, **kwargs):
+        super(Futrell2018NormStoriesEncoding, self).__init__(*args, **kwargs)
+        regression = linear_regression(xarray_kwargs=dict(
+            stimulus_coord='word_id', neuroid_coord='subject_id'))
+        correlation = pearsonr_correlation(xarray_kwargs=dict(
+            correlation_coord='word_id', neuroid_coord='subject_id'))
+        self._metric = CrossRegressedCorrelation(
+            regression=regression, correlation=correlation,
+            crossvalidation_kwargs=dict(splits=5, kfold=True, unique_split_values=True,
+                                        split_coord='story_id', stratification_coord=None))
+
+    def _load_assembly(self):
+        assembly = super(Futrell2018NormStoriesEncoding, self)._load_assembly()
+        # zscore the assembly
+        assembly_zs = []
+        columns_to_remove = []
+        for story_id, story in assembly.groupby('story_id'):
+            a = stats.zscore(story.values, axis=0, nan_policy='omit')
+            nan_cols = np.where(np.all(np.isnan(story.values), axis=0))[0]
+            nan_cols_zs = np.where(np.all(np.isnan(a), axis=0))[0]
+            diff = set(nan_cols_zs) - set(nan_cols)
+            columns_to_remove.append(list(diff))
+            story_zs = story.copy(data=a)
+            assembly_zs.append(story_zs)
+        assembly_zs = xr.concat(assembly_zs, dim='presentation')
+        columns_to_remove = list(set([item for sublist in columns_to_remove for item in sublist]))
+        mask = np.ones(assembly_zs.shape[1], dtype=bool)
+        mask[columns_to_remove] = False
+        assembly_zs = assembly_zs[:, mask]
+
+        # filter subjects that have done at least 5 stories. Otherwise, we cannot 5-fold cross-validate across stories
+        def count_stories(subject_assembly):
+            subject_assembly = subject_assembly.dropna('presentation')
+            num_stories = len(np.unique(subject_assembly['story_id'].values))
+            return xr.DataArray(num_stories)
+
+        subject_stories = assembly_zs.groupby('subject_id').apply(count_stories)
+        keep_subjects = subject_stories[subject_stories >= 5]['subject_id'].values
+        keep_subjects = set(keep_subjects) - {'A1I02VZ07MZB7F'}  # this subject only has one data point for story 8
+        assembly_zs = assembly_zs[
+            {'neuroid': [subject in keep_subjects for subject in assembly_zs['subject_id'].values]}]
+
+        return assembly_zs
+
 
 benchmark_pool_list = [
     ('Futrell2018-encoding',Futrell2018Encoding, dict()),
@@ -341,3 +524,15 @@ benchmark_pool_list = [
 benchmark_pool = {identifier: LazyLoad(
     lambda identifier=identifier,ctr=ctr, kwargs=kwargs: ctr(identifier=identifier, **kwargs))
     for identifier,ctr, kwargs in benchmark_pool_list}
+
+additional_pool=[('Futrell2018-norm-encoding', Futrell2018NormEncoding),
+                ('Futrell2018-norm-v2-encoding', Futrell2018NormV2Encoding),
+                ('Futrell2018-norm-v2-sentence-encoding', Futrell2018NormV2SentencesEncoding),
+                ('Futrell2018-norm-v2-stories-encoding', Futrell2018NormStoriesEncoding),
+                ('Futrell2018-norm-stories-encoding', Futrell2018NormStoriesEncoding)]
+
+
+additional_pool = {identifier: LazyLoad(lambda identifier=identifier, ctr=ctr: ctr(identifier=identifier))
+                  for identifier, ctr in additional_pool}
+
+benchmark_pool.update(additional_pool)
