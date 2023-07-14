@@ -1201,7 +1201,7 @@ for identifier, num_layers in [
 checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_1b_v2/gpt2/checkpoints_4/']
 
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-1B-v2', 12,)], np.arange(2500,320000+2500,2500)):
+    ('gpt2-neox-pos_learned-1B-v3', 12,)], np.arange(2500,320000+2500,2500)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
@@ -1229,7 +1229,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 # 161 checkpoints
 checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_100m_v2/gpt2/checkpoints_5/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-100M-v2', 12,)], np.arange(250,40250+100,250)):
+    ('gpt2-neox-pos_learned-100M-v3', 12,)], np.arange(250,40250+100,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
@@ -1260,7 +1260,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 # 46 models
 checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_10m_v2/gpt2/checkpoints_6/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-10M-v2', 12,)], np.arange(250,11500+250,250)):
+    ('gpt2-neox-pos_learned-10M-v3', 12,)], np.arange(250,11500+250,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
@@ -1288,7 +1288,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 
 checkpoints=['/om/weka/evlab/ehoseini/MyData/miniBERTa_training/miniBERTa_1m_v2/gpt2/checkpoints_7/']
 for (identifier, num_layers), ckpnts in itertools.product([
-    ('gpt2-neox-pos_learned-1M-v2', 12,)], np.arange(250,4000+250,250)):
+    ('gpt2-neox-pos_learned-1M-v3', 12,)], np.arange(250,4000+250,250)):
     identifier = f"{identifier}-ckpnt-{ckpnts}"
     transformer_configurations.append(dict(
         prefix='gpt-neox-pos-learned', tokenizer_special_tokens=('ġ',),
