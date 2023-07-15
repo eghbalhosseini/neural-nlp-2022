@@ -19,7 +19,7 @@ from brainscore.utils import LazyLoad
 from neural_nlp.models.wrapper.core import ActivationsExtractorHelper
 from neural_nlp.models.wrapper.pytorch import PytorchWrapper
 from neural_nlp.models.gpt_neox_model import GPTNeoXPosLearnedModel,GPTNeoXPosLearnedConfig, initialize_gpt_neox_weights
-from neural_nlp.models import initialize_gpt2_weights
+from neural_nlp.models import initialize_gpt2_weights,initialize_layer_norm_uniform
 from transformers import AutoConfig, AutoModel, AutoModelWithLMHead,AutoTokenizer
 #AutoConfig.register('gpt-neox',GPTNeoXConfig)
 AutoConfig.register('gpt-neox-pos-learned',GPTNeoXPosLearnedConfig)
@@ -1531,7 +1531,7 @@ for identifier, num_layers in [
         layers=('embedding',) + tuple(f'encoder.layer.{i}' for i in range(num_layers))
     ))
 
-for condition in ['trained','untrained','untrained_hf','permuted','untrained-1','untrained-2','untrained-3','untrained-4','untrained-5','untrained-6','untrained-7','untrained-std-1','untrained-std-2','untrained-mu-1','untrained-mu-2','untrained-ln-hf']:
+for condition in ['trained','untrained','untrained_hf','permuted','untrained-1','untrained-2','untrained-3','untrained-4','untrained-5','untrained-6','untrained-7','untrained-std-1','untrained-std-2','untrained-mu-1','untrained-mu-2','untrained-ln-hf','untrained-ln-uniform']:
 #for untrained in False, True:
     for configuration in transformer_configurations:
         configuration = copy.deepcopy(configuration)
@@ -1633,7 +1633,8 @@ for condition in ['trained','untrained','untrained_hf','permuted','untrained-1',
                     elif configuration['untrained_type'] == 'untrained-ln-hf':
                         state_dict = initialize_gpt2_weights(model, permute=False,mu={'ln_1':1.0,'ln_2':1.0},sigma={'ln_1':0.1,'ln_2':0.1},
                                                              valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln_1','ln_2','mlp.c_fc','mlp.c_proj','wte','wpe','lm_head']) # remove ln_1 shuffling
-
+                    elif configuration['untrained_type'] == 'untrained-ln-uniform':
+                        state_dict=initialize_layer_norm_uniform(model)
 
                     elif configuration['untrained_type'] == 'untrained':
                         state_dict = initialize_gpt2_weights(model,permute=False)

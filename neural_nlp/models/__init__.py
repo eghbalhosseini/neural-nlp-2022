@@ -59,6 +59,24 @@ def initialize_gpt2_weights(model,mu=0.0,sigma=0.02,permute=False,valid_keys=Non
 
     return perm_states
 
+def initialize_layer_norm_uniform(model,valid_keys=None):
+    model_perm = copy.deepcopy(model)
+    orig_states = model_perm.state_dict()
+    if valid_keys is None:
+        valid_keys=['ln_1','ln_2']
+    to_permute=np.sum([np.sum([valid_keys[n] in s for s in list(orig_states.keys())]) for n in range(len(valid_keys))])
+    pbar=tqdm(total=to_permute,desc=f'initializing {to_permute} weights in {len(orig_states.keys())}')
+    perm_states = dict.fromkeys(orig_states.keys())
+    for key in orig_states.keys():
+        if any([ x in key for x in valid_keys]):
+            a = orig_states[key]
+            b = torch.rand(a.shape,requires_grad=False)
+            perm_states[key] = permute_mat(b)
+            pbar.update()
+        else:
+            perm_states[key] = orig_states[key]
+
+    return perm_states
 
 from neural_nlp.models.implementations import model_pool, load_model, model_layers
 
