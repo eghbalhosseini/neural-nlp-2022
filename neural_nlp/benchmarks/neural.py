@@ -1384,6 +1384,8 @@ class _DsParametricfMRIBenchmark(Benchmark):
                                      "then median of subject scores"
         return score
 
+
+
 class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
     """
     data source:
@@ -1471,10 +1473,169 @@ class DsParametricfMRIRandV3RidgeEncoding(DsParametricfMRIRidgeEncoding):
 class DsParametricfMRIMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='min',threshold=90):
         return super()._load_assembly(version='min',threshold=90)
-
 class DsParametricfMRIRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='random',threshold=90):
         return super()._load_assembly(version='random',threshold=90)
+
+
+class _DsParametricfMRIV2Benchmark(Benchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4
+    """
+
+    def __init__(self, identifier, metric, version='max', threshold=90):
+        self._identifier = identifier
+        assembly = self._load_assembly(version=version, threshold=threshold)
+        self._target_assembly = assembly
+        self._single_metric = metric
+        # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
+        self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    def _metric(self, source_assembly, target_assembly):
+        """ for ceiling compute """
+        cross_scores = self._cross(target_assembly, apply=
+        lambda cross_assembly: self._apply_cross(source_assembly, cross_assembly))
+        score = self._average_cross_scores(cross_scores)
+        return score
+
+    def _average_cross_scores(self, cross_scores):
+        return cross_scores.mean(['experiment', 'atlas'])
+
+    # @load_s3(key='Pereira2018')
+    def _load_assembly(self, version='max', threshold=90):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_V2.pkl')
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        # normalize the assembly
+        a = stats.zscore(assembly.values, axis=0)
+        assembly = assembly.copy(data=a)
+        # make sure that the mean of each voxel is 0
+        assert np.allclose(assembly.mean('presentation').values, 0)
+        assembly = assembly[assembly['stim_group'] == version]
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        # create a stimulus set for the assembly
+        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stimulus_group': assembly['stim_group'].values,
+                                    'stimulus_group_id': assembly['stim_group_id'].values,
+                                    'stimulus_type': assembly['stim_type'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'experiment': assembly['experiment'].values,
+                                    'stimulus': assembly['stimulus'].values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        # attach stimulus set as an attribute to the assembly
+        # add name to stimulus set
+        experiment = assembly['experiment'].values[0]
+        stimulus_group = assembly['stim_group'].values[0]
+        stimulus_set.name = f"{experiment}_{stimulus_group}"
+        assembly.attrs['stimulus_set'] = stimulus_set
+
+        return assembly
+
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
+        model_activations = listen_to(candidate, stimulus_set,reset_column='stimulus_group_id',average_sentence=False)
+
+        model_activations = read_words(candidate, stimulus_set, copy_columns=['word_id'],
+                                       reset_column='stim_group_id')
+        # model_activations = self._listen_to(candidate, stimulus_set, reset_column='stimulus_passage_index')
+        assert set(model_activations['stim_group_id'].values) == set(self._target_assembly['stim_group_id'].values)
+        # add a new cooordinate called stimulus_id
+        model_activations = model_activations.assign_coords(
+            {'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
+
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
+
+    def _apply_cross(self, source_assembly, cross_assembly):
+        cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
+        source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
+        assert len(cross_assembly['presentation']) in [80]
+        assert not np.isnan(cross_assembly).any()
+        source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
+                                                            for stimulus_id in source_assembly['stimulus_id'].values]}]
+        return self._single_metric(source_assembly, cross_assembly)
+
+    @property
+    def ceiling(self):
+        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
+
+    def _aggregate_ceiling(self, neuroid_scores, ceiling, subject_column='subject'):
+        aggregate_raw = self._aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+        score = consistency(aggregate_raw, ceiling)
+        score.attrs['raw'] = aggregate_raw
+        score.attrs['ceiling'] = ceiling
+        score.attrs['description'] = "ceiling-normalized score"
+        return score
+
+    def _aggregate_no_ceiling(self, neuroid_scores, subject_column='subject'):
+        aggregate_raw = self._aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+        score = aggregate_raw
+        score.attrs['description'] = "no_ceiling-normalized score"
+        return score
+
+    def _aggregate_neuroid_scores(self, neuroid_scores, subject_column):
+        subject_scores = neuroid_scores.groupby(subject_column).median()
+        center = subject_scores.median(subject_column).values
+        subject_values = np.nan_to_num(subject_scores.values,
+                                       nan=0)  # mad cannot deal with all-nan in one axis, treat as 0
+        subject_axis = subject_scores.dims.index(subject_scores[subject_column].dims[0])
+        error = median_absolute_deviation(subject_values, axis=subject_axis)
+        # score = Score([center, error], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score = Score([float(center), float(error)], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+        score.attrs['raw'] = neuroid_scores
+        score.attrs['description'] = "score aggregated by taking median of neuroids per subject, " \
+                                     "then median of subject scores"
+        return score
+
+
+class DsParametricfMRINormRidgeEncoding(_DsParametricfMRIV2Benchmark):
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(DsParametricfMRINormRidgeEncoding, self).__init__(metric=metric, **kwargs)
+    
+    def _load_assembly(self,version='max',threshold=90):
+        return  super(DsParametricfMRINormRidgeEncoding, self)._load_assembly(version='max',threshold=90)
+
+class DsParametricfMRINormMaxV1RidgeEncoding(DsParametricfMRINormRidgeEncoding):
+    def _load_assembly(self,version='max',threshold=90):
+        return super()._load_assembly(version='max',threshold=90)
+
 
 class DsParametricfMRIPLSEncoding(_DsParametricfMRIBenchmark):
     """
@@ -2708,6 +2869,8 @@ benchmark_pool = [
     ('DsParametricfMRI-max-PLSEncoding', DsParametricfMRIMaxPLSEncoding),
     ('DsParametricfMRI-min-PLSEncoding', DsParametricfMRIMinPLSEncoding),
     ('DsParametricfMRI-rand-PLSEncoding', DsParametricfMRIRandPLSEncoding),
+
+    ('DsParametricfMRI-Norm-max-RidgeEncoding',DsParametricfMRINormMaxV1RidgeEncoding),
 
     ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
     ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),

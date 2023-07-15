@@ -1251,6 +1251,19 @@ for (identifier, num_layers), version in itertools.product([
         layers=('embeddings',) + tuple(f'encoder.albert_layer_groups.{i}' for i in range(num_layers))
     ))
 
+# add opt models
+for identifier, num_layers in [
+    ('facebook/opt-125m', 12),
+    ('facebook/opt-350m', 24),
+    ('facebook/opt-1.3b', 24),
+    ('facebook/2.7b', 32),
+
+]:
+    transformer_configurations.append(dict(
+        prefix='OPT', weight_identifier=identifier, tokenizer_special_tokens=('ġ',),
+        # https://github.com/huggingface/pytorch-transformers/blob/c589862b783b94a8408b40c6dc9bf4a14b2ee391/pytorch_transformers/modeling_gpt2.py#L514
+        layers=('decoder.embed_tokens',) + tuple(f'decoder.layers.{i}' for i in range(num_layers))
+    ))
 
 # t5
 class _T5Wrapper:
@@ -1301,15 +1314,22 @@ for untrained in False, True:
         configuration = copy.deepcopy(configuration)
         # either use the defined identifier or the weights used
         identifier = configuration.get('identifier', configuration['weight_identifier'])
-
+        identifier=identifier.replace('/','_')
+        prefix = configuration.get('identifier', configuration['prefix'])
         if untrained:
             identifier += '-untrained'
             configuration['trained'] = False
 
         # either use the defined values for config, model and tokenizer or build from prefix
-        configuration['config_ctr'] = configuration.get('config_ctr', configuration['prefix'] + 'Config')
-        configuration['model_ctr'] = configuration.get('model_ctr', configuration['prefix'] + 'Model')
-        configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', configuration['prefix'] + 'Tokenizer')
+        elif prefix == 'OPT':
+            configuration['config_ctr'] = configuration.get('config_ctr', 'AutoConfig')
+            configuration['model_ctr'] = configuration.get('model_ctr', 'AutoModelForCausalLM')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', 'AutoTokenizer')
+            configuration['module_ctr'] = 'transformers'
+        else:
+            configuration['config_ctr'] = configuration.get('config_ctr', configuration['prefix'] + 'Config')
+            configuration['model_ctr'] = configuration.get('model_ctr', configuration['prefix'] + 'Model')
+            configuration['tokenizer_ctr'] = configuration.get('tokenizer_ctr', configuration['prefix'] + 'Tokenizer')
 
 
         def model_instantiation(identifier=identifier, configuration=frozenset(configuration.items())):
