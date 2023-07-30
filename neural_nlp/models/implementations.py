@@ -1333,7 +1333,7 @@ for (identifier, num_layers), ckpnts in itertools.product([
 mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/caprica-gpt2-small-x81']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
-    ('mistral-caprica-gpt2-small-x81', 12),], list(np.concatenate([np.asarray([40,400,4000]),np.arange(0,410000,10000)]))):
+    ('mistral-caprica-gpt2-small-x81', 12),], list(np.concatenate([np.asarray([40,400,4000]),np.asarray([20,200,2000,20000,200000]),np.arange(0,410000,10000)]))):
     identifier = f"{identifier}-ckpnt-{ckpoint}"
     transformer_configurations.append(dict(
         prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
