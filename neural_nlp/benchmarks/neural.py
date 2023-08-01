@@ -623,8 +623,8 @@ class PereiraV2Encoding(_PereiraBenchmark):
 
         assembly.attrs['stimulus_set']=StimulusSet(stimulus_set)
         assembly.attrs['stimulus_set'].name='Pereira2018'
-        assembly.attrs['version']='zscored'
-        assembly=NeuroidAssembly(assembly_zs)
+        assembly.attrs['version']='language'
+        assembly=NeuroidAssembly(assembly)
         return assembly
 
     @property
