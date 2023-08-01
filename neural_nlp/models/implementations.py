@@ -1638,13 +1638,13 @@ for condition in ['trained','untrained','untrained_hf','permuted','untrained-1',
                         state_dict = initialize_gpt2_weights(model, permute=False,mu=0.0,sigma=0.02,
                                                              valid_keys=['None'])  # remove all
                     elif configuration['untrained_type'] == 'untrained-std-1':
-                        state_dict = initialize_gpt2_weights(model, permute=False,sigma=0.2)  # remove all
+                        state_dict = initialize_gpt2_weights(model, permute=False,sigma=0.05)  # remove all
                     elif configuration['untrained_type'] == 'untrained-std-2':
-                        state_dict = initialize_gpt2_weights(model, permute=False,sigma=2)  # remove all
+                        state_dict = initialize_gpt2_weights(model, permute=False,sigma=0.1)  # remove all
                     elif configuration['untrained_type'] == 'untrained-mu-1':
-                        state_dict = initialize_gpt2_weights(model, permute=False,mu=.5, sigma=0.2)  # remove all
+                        state_dict = initialize_gpt2_weights(model, permute=False,mu=.5, sigma=0.02)  # remove all
                     elif configuration['untrained_type'] == 'untrained-mu-2':
-                        state_dict = initialize_gpt2_weights(model, permute=False,mu=1, sigma=0.2)  # remove all
+                        state_dict = initialize_gpt2_weights(model, permute=False,mu=1.0, sigma=0.02)  # remove all
                     elif configuration['untrained_type'] == 'untrained-ln-hf':
                         state_dict = initialize_gpt2_weights(model, permute=False,mu={'ln_1':1.0,'ln_2':1.0},sigma={'ln_1':0.1,'ln_2':0.1},
                                                              valid_keys=['attn.c_attn.weight','attn.c_attn.bias','attn.c_proj','ln_1','ln_2','mlp.c_fc','mlp.c_proj','wte','wpe','lm_head']) # remove ln_1 shuffling
