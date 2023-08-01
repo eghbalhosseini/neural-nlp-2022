@@ -607,7 +607,7 @@ class PereiraV2Encoding(_PereiraBenchmark):
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
-        super(PereiraNormalizedEncoding, self).__init__(metric=metric, **kwargs)
+        super(PereiraV2Encoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='language'):
         assembly=xr.load_dataarray(f'{PEREIRA2018_SAMPLE}/Pereira2018.nc')
