@@ -595,6 +595,43 @@ class PereiraNormalizedEncoding(_PereiraBenchmark):
     def ceiling(self):
         return super(PereiraNormalizedEncoding, self).ceiling
 
+class PereiraV2Encoding(_PereiraBenchmark):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(PereiraNormalizedEncoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='language'):
+        assembly=xr.load_dataarray(f'{PEREIRA2018_SAMPLE}/Pereira2018.nc')
+
+
+        # select only langauge atlas
+        language_atlas=assembly.atlas.values=='language'
+        assembly=assembly.sel(neuroid=language_atlas)
+        # copy over the attributes from assembly
+        # explicitly load the stimulus set
+        stimulus_set_file=assembly.attrs['stimulus_set'].replace('s3:',f'{PEREIRA2018_SAMPLE}/')
+        stimulus_set=pd.read_csv(stimulus_set_file)
+
+        assembly.attrs['stimulus_set']=StimulusSet(stimulus_set)
+        assembly.attrs['stimulus_set'].name='Pereira2018'
+        assembly.attrs['version']='zscored'
+        assembly=NeuroidAssembly(assembly_zs)
+        return assembly
+
+    @property
+    @load_s3(key='Pereira2018-encoding-ceiling')
+    def ceiling(self):
+        return super(PereiraNormalizedEncoding, self).ceiling
+
 class PereiraNormalizedEncoding_V2(PereiraNormalizedEncoding):
     def __call__(self, candidate):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
@@ -1269,6 +1306,7 @@ benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
     ('Pereira2018-norm-encoding', PereiraNormalizedEncoding),
+    ('Pereira2018-v2-encoding', PereiraV2Encoding),
     ('Pereira2018-norm-v2-encoding', PereiraNormalizedEncoding_V2),
     ('ANNSet1fMRI-encoding', ANNSet1fMRIEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
