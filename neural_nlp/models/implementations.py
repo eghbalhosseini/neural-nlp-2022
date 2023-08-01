@@ -1652,7 +1652,7 @@ for condition in ['trained','untrained','untrained_hf','permuted','untrained-1',
                         state_dict=initialize_layer_norm_uniform(model)
 
                     elif configuration['untrained_type'] == 'untrained':
-                        state_dict = initialize_gpt2_weights(model,permute=False)
+                        state_dict = initialize_gpt2_weights(model,permute=False,mu=0.0,sigma=0.02)
                     elif configuration['untrained_type'] == 'untrained_hf':
                         state_dict = model.state_dict()
                 else:
