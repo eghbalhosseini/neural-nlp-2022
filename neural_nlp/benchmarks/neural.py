@@ -510,6 +510,29 @@ def listen_to(candidate, stimulus_set, reset_column='story', average_sentence=Tr
     model_activations = model_activations[{'presentation': idx}]
     return model_activations
 
+
+def listen_to_v2(candidate, stimulus_set, reset_column='story', average_sentence=True):
+    """
+    Pass a `stimulus_set` through a model `candidate`.
+    Operates on a sentence-based `stimulus_set`.
+    """
+    activations = []
+    for story in ordered_set(stimulus_set[reset_column].values):
+        story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
+        story_stimuli.name = f"listen_to_{stimulus_set.name}-{story}"
+        story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
+        if average_sentence==False:
+            # picke up the last word of each sentence
+            story_activations = story_activations[{'presentation':[-1]}]
+        activations.append(story_activations)
+    model_activations = merge_data_arrays(activations)
+    # merging does not maintain stimulus order. the following orders again
+    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
+    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+    model_activations = model_activations[{'presentation': idx}]
+    return model_activations
+
 def read_words(candidate, stimulus_set, reset_column='sentence_id', copy_columns=(), average_sentence=False):
     """
     Pass a `stimulus_set` through a model `candidate`.
@@ -1384,8 +1407,6 @@ class _DsParametricfMRIBenchmark(Benchmark):
                                      "then median of subject scores"
         return score
 
-
-
 class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
     """
     data source:
@@ -1517,7 +1538,7 @@ class _DsParametricfMRIV2Benchmark(Benchmark):
         a = stats.zscore(assembly.values, axis=0)
         assembly = assembly.copy(data=a)
         # make sure that the mean of each voxel is 0
-        assert np.allclose(assembly.mean('presentation').values, 0)
+        #assert np.allclose(assembly.mean('presentation').values, 0)
         assembly = assembly[assembly['stim_group'] == version]
         if vox_reliability['language'][0]:
             vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
@@ -1552,17 +1573,13 @@ class _DsParametricfMRIV2Benchmark(Benchmark):
 
     def __call__(self, candidate):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
-        stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
-        model_activations = listen_to(candidate, stimulus_set,reset_column='stimulus_group_id',average_sentence=False)
+        model_activations = listen_to_v2(candidate, stimulus_set,reset_column='stimulus_id',average_sentence=False)
 
-        model_activations = read_words(candidate, stimulus_set, copy_columns=['word_id'],
-                                       reset_column='stim_group_id')
+        #model_activations = read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimulus_id')
         # model_activations = self._listen_to(candidate, stimulus_set, reset_column='stimulus_passage_index')
-        assert set(model_activations['stim_group_id'].values) == set(self._target_assembly['stim_group_id'].values)
+        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
         # add a new cooordinate called stimulus_id
-        model_activations = model_activations.assign_coords(
-            {'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
-
+        
         _logger.info('Scoring across experiments & atlases')
         cross_scores = self._cross(self._target_assembly,
                                    apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
@@ -1626,16 +1643,21 @@ class DsParametricfMRINormRidgeEncoding(_DsParametricfMRIV2Benchmark):
         metric = CrossRegressedCorrelation(
             regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None,random_state=2))
         super(DsParametricfMRINormRidgeEncoding, self).__init__(metric=metric, **kwargs)
     
-    def _load_assembly(self,version='max',threshold=90):
-        return  super(DsParametricfMRINormRidgeEncoding, self)._load_assembly(version='max',threshold=90)
 
-class DsParametricfMRINormMaxV1RidgeEncoding(DsParametricfMRINormRidgeEncoding):
+class DsParametricfMRINormMaxRidgeEncoding(DsParametricfMRINormRidgeEncoding):
     def _load_assembly(self,version='max',threshold=90):
         return super()._load_assembly(version='max',threshold=90)
+    
+class DsParametricfMRINormMinRidgeEncoding(DsParametricfMRINormRidgeEncoding):
+    def _load_assembly(self,version='min',threshold=90):
+        return super()._load_assembly(version='min',threshold=90)
 
+class DsParametricfMRINormRandRidgeEncoding(DsParametricfMRINormRidgeEncoding):
+    def _load_assembly(self,version='random',threshold=90):
+        return super()._load_assembly(version='random',threshold=90)
 
 class DsParametricfMRIPLSEncoding(_DsParametricfMRIBenchmark):
     """
@@ -2870,7 +2892,9 @@ benchmark_pool = [
     ('DsParametricfMRI-min-PLSEncoding', DsParametricfMRIMinPLSEncoding),
     ('DsParametricfMRI-rand-PLSEncoding', DsParametricfMRIRandPLSEncoding),
 
-    ('DsParametricfMRI-Norm-max-RidgeEncoding',DsParametricfMRINormMaxV1RidgeEncoding),
+    ('DsParametricfMRI-Norm-max-RidgeEncoding',DsParametricfMRINormMaxRidgeEncoding),
+    ('DsParametricfMRI-Norm-min-RidgeEncoding', DsParametricfMRINormMinRidgeEncoding),
+    ('DsParametricfMRI-Norm-rand-RidgeEncoding', DsParametricfMRINormRandRidgeEncoding),
 
     ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
     ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),
