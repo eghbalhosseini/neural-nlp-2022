@@ -9,6 +9,7 @@ import numpy as np
 from brainio.assemblies import merge_data_arrays
 from numpy.random.mtrand import RandomState
 # adding a test info 
+# another test 
 def permute_mat(mat):
     mat_flat = mat.flatten()
     assert(mat_flat.ndim==1)
