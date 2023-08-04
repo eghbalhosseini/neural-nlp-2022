@@ -8,7 +8,6 @@ import argparse
 import numpy as np
 from brainio.assemblies import merge_data_arrays
 from numpy.random.mtrand import RandomState
-from neural_nlp.models.implementations import model_pool, load_model, model_layers
 def permute_mat(mat):
     mat_flat = mat.flatten()
     assert(mat_flat.ndim==1)
