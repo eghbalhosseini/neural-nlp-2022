@@ -55,7 +55,9 @@ def initialize_gpt2_weights(model, mu=0.0, sigma=0.02, permute=False, valid_keys
     for key in orig_states.keys():
         if any([x in key for x in valid_keys]):
             a = orig_states[key]
-            b = torch.normal(mu_dict[key], sigma_dict[key], size=a.shape)
+            idx = [x in key for x in valid_keys].index(True)
+            mu_key = valid_keys[idx]
+            b = torch.normal(mu_dict[mu_key], sigma_dict[mu_key], size=a.shape)
             perm_states[key] = permute_mat(a) if permute else permute_mat(b)
             pbar.update()
         else:
