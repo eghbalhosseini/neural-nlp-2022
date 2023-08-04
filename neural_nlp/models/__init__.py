@@ -16,7 +16,6 @@ def permute_mat(mat):
     mat_perm = torch.reshape(mat_flat_rnd, mat.shape)
     return mat_perm
 
-
 def initialize_gpt2_weights(model,mu=0.0,sigma=0.02,permute=False,valid_keys=None):
     model_perm = copy.deepcopy(model)
     orig_states = model_perm.state_dict()
@@ -64,7 +63,7 @@ def initialize_gpt2_weights(model,mu=0.0,sigma=0.02,permute=False,valid_keys=Non
     return perm_states
 
 
-def initialize_layer_norm_uniform(model, valid_keys=None):
+def initialize_layer_norm_uniform(model,valid_keys=None):
     model_perm = copy.deepcopy(model)
     orig_states = model_perm.state_dict()
     if valid_keys is None:
