@@ -1345,7 +1345,7 @@ for (identifier, num_layers), ckpoint in itertools.product([
 mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/expanse-gpt2-small-x777']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
-    ('expanse-gpt2-small-x777', 12),], list(np.asarray([0,40,400,4000,40000,400000],np.asarray([20,200,2000,20000,200000])))):
+    ('expanse-gpt2-small-x777', 12),], list(np.concatenate([np.asarray([0,40,400,4000,40000,400000]),np.asarray([20,200,2000,20000,200000])]))):
     identifier = f"{identifier}-ckpnt-{ckpoint}"
     transformer_configurations.append(dict(
         prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
@@ -1357,7 +1357,7 @@ for (identifier, num_layers), ckpoint in itertools.product([
 mistral_root_=[ '/om/weka/evlab/ehoseini/MyData/mistral/alias-gpt2-small-x21']
 #mistral_root_=[ '/Users/eghbalhosseini/MyData/mistral/caprica-gpt2-small-x81']
 for (identifier, num_layers), ckpoint in itertools.product([
-    ('alias-gpt2-small-x21', 12),], list(np.asarray([0,40,400,4000,40000,400000],np.asarray([20,200,2000,20000,200000])))):
+    ('alias-gpt2-small-x21', 12),], list(np.concatenate([np.asarray([0,40,400,4000,40000,400000]),np.asarray([20,200,2000,20000,200000])]))):
     identifier = f"{identifier}-ckpnt-{ckpoint}"
     transformer_configurations.append(dict(
         prefix='mistral', tokenizer_special_tokens=('ġ',), weight_identifier=identifier, weight_file=f"{mistral_root_[0]}/ckpt_{ckpoint}",
