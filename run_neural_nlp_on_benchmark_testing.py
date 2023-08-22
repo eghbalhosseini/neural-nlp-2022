@@ -23,8 +23,8 @@ if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
-    benchmark_name = "Pereira2018-norm-encoding"
-    model_name="distilgpt2-untrained-ln-hf"
+    benchmark_name = "Futrell2018-encoding"
+    model_name="distilgpt2"
     #model_name="distilgpt2"
     #config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     #model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
