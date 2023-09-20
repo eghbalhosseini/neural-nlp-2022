@@ -37,7 +37,9 @@ def score(benchmark, model, layers=None, model_impl=None, subsample=None):
         else:  # prerun everything for 1st layer
             candidate = FixedLayer(model_impl, layer, prerun=layers if i == 0 else None)
         layer_score = benchmark_impl(candidate)
-        layer_score = layer_score.expand_dims('layer')
+        # check if we have a layer dimension
+        if 'layer' not in layer_score.dims:
+            layer_score = layer_score.expand_dims('layer')
         layer_score['layer'] = [layer]
         layer_scores.append(layer_score)
     layer_scores = Score.merge(*layer_scores)
