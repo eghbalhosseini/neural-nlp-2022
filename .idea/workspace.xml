@@ -1,0 +1,880 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2a3348cf-c617-4d86-8069-61390a64ade1" name="Default Changelist" comment="adding RSA analysis" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="context" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;eghbalhosseini&quot;
+  }
+}</component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="07b957ae-0274-4f16-84bb-3471057832b3" />
+        <option name="url" value="git@github.com:eghbalhosseini/neural-nlp-2022.git" />
+      </UrlAndAccount>
+    </option>
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$USER_HOME$/Library/Caches/JetBrains/PyCharm2021.1/remote_sources/2078240531/-1421354581/brainscore/metrics/regression.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/Library/Caches/JetBrains/PyCharm2021.1/remote_sources/2078240531/-1421354581/brainscore/metrics/transformations.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/Library/Caches/JetBrains/PyCharm2021.1/remote_sources/2078240531/-1421354581/brainscore/metrics/xarray_utils.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/Library/Caches/JetBrains/PyCharm2021.1/remote_sources/2078240531/-1421354581/sklearn/linear_model/_base.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/Library/Caches/JetBrains/PyCharm2021.2/remote_sources/-1251724298/-1699062560/neural_nlp/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/__init__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/__main__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/benchmarks/behavioral.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/benchmarks/ceiling.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/benchmarks/performance.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/benchmarks/s3.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/models/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/models/implementations.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/models/wrapper/core.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/neural_data/fmri.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/neural_nlp/neural_data/naturalStories.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/setup.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/../neural-nlp_forked/neural-nlp/neural_nlp/benchmarks/neural.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/logging/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/runpy.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainio/assemblies.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/regression.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/transformations.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/xarray_utils.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/utils/__init__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/result_caching/__init__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/scipy/stats/stats.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/tokenize.py" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="24yCnfozX0LescnztljfUTqWqxq" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "WebServerToolWindowFactoryState": "true",
+    "com.google.cloudcode.ide_session_index": "20231023_0001",
+    "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "settings.editor.selected.configurable": "preferences.lookFeel",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/neural_nlp/analyze" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.run_neural_nlp_on_model_manually">
+    <configuration name="run_neural_nlp_behavioral_on_model_manually" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="neural-nlp-2022" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run_neural_nlp_behavioral_on_model_manually.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_neural_nlp_on_model_manually" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="neural-nlp-2022" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run_neural_nlp_on_model_manually.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch_3" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="neural-nlp-2022" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_3.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in neural_nlp_pipeline_debug.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="neural-nlp-2022" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/neural_nlp_pipeline_debug.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.pytest in neural_nlp_pipeline_debug.py" />
+        <item itemvalue="Python.scratch_3" />
+        <item itemvalue="Python.run_neural_nlp_on_model_manually" />
+        <item itemvalue="Python.run_neural_nlp_behavioral_on_model_manually" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2a3348cf-c617-4d86-8069-61390a64ade1" name="Default Changelist" comment="" />
+      <created>1644593607805</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1644593607805</updated>
+      <workItem from="1644593609111" duration="6223000" />
+      <workItem from="1644604388306" duration="4672000" />
+      <workItem from="1644785118771" duration="816000" />
+      <workItem from="1645210767561" duration="50000" />
+      <workItem from="1645214698635" duration="15019000" />
+      <workItem from="1645468762978" duration="1233000" />
+      <workItem from="1645804869913" duration="4554000" />
+      <workItem from="1646066071916" duration="4160000" />
+      <workItem from="1646156308256" duration="8108000" />
+      <workItem from="1646237659662" duration="694000" />
+      <workItem from="1646245613183" duration="1841000" />
+      <workItem from="1646308375777" duration="265000" />
+      <workItem from="1646320982071" duration="5877000" />
+      <workItem from="1646338981752" duration="5759000" />
+      <workItem from="1646397409078" duration="5026000" />
+      <workItem from="1646916660356" duration="4459000" />
+      <workItem from="1646928451303" duration="1564000" />
+      <workItem from="1646938126764" duration="2974000" />
+      <workItem from="1647297621998" duration="1170000" />
+      <workItem from="1647370582347" duration="4212000" />
+      <workItem from="1647521527709" duration="4115000" />
+      <workItem from="1647866352664" duration="12513000" />
+      <workItem from="1647965460764" duration="1552000" />
+      <workItem from="1650566085615" duration="3414000" />
+      <workItem from="1651435508463" duration="2395000" />
+      <workItem from="1651881421580" duration="844000" />
+      <workItem from="1652102517958" duration="4644000" />
+      <workItem from="1652202331342" duration="1033000" />
+      <workItem from="1652282489727" duration="1813000" />
+      <workItem from="1652811921087" duration="767000" />
+      <workItem from="1652975917611" duration="1341000" />
+      <workItem from="1654007228868" duration="8000" />
+      <workItem from="1654050294690" duration="790000" />
+      <workItem from="1654820983324" duration="437000" />
+      <workItem from="1654861752232" duration="29000" />
+      <workItem from="1654861785480" duration="1526000" />
+      <workItem from="1654881552367" duration="4900000" />
+      <workItem from="1655070327913" duration="1902000" />
+      <workItem from="1655131394721" duration="611000" />
+      <workItem from="1655677828227" duration="290000" />
+      <workItem from="1655730797769" duration="4731000" />
+      <workItem from="1655816977339" duration="1388000" />
+      <workItem from="1656093622298" duration="652000" />
+      <workItem from="1656163835835" duration="1370000" />
+      <workItem from="1656263149261" duration="8425000" />
+      <workItem from="1656888716016" duration="5770000" />
+      <workItem from="1657827397753" duration="1117000" />
+      <workItem from="1657909936933" duration="617000" />
+      <workItem from="1657990681407" duration="1764000" />
+      <workItem from="1658066785544" duration="7756000" />
+      <workItem from="1658102590159" duration="606000" />
+      <workItem from="1658104246744" duration="19131000" />
+      <workItem from="1658320941193" duration="112000" />
+      <workItem from="1658331314260" duration="784000" />
+      <workItem from="1658350467721" duration="756000" />
+      <workItem from="1658411089987" duration="1334000" />
+      <workItem from="1658431766858" duration="5177000" />
+      <workItem from="1658778130780" duration="3728000" />
+      <workItem from="1658848340433" duration="836000" />
+      <workItem from="1658865797660" duration="606000" />
+      <workItem from="1659103618479" duration="5343000" />
+      <workItem from="1659109335418" duration="2397000" />
+      <workItem from="1660593620592" duration="2031000" />
+      <workItem from="1660664724386" duration="1241000" />
+      <workItem from="1660760189490" duration="817000" />
+      <workItem from="1660780482680" duration="514000" />
+      <workItem from="1660781685523" duration="4305000" />
+      <workItem from="1660835287557" duration="1691000" />
+      <workItem from="1660864454570" duration="1509000" />
+      <workItem from="1661208703554" duration="1299000" />
+      <workItem from="1661355896897" duration="1002000" />
+      <workItem from="1661701590175" duration="577000" />
+      <workItem from="1661702476062" duration="913000" />
+      <workItem from="1661890918330" duration="624000" />
+      <workItem from="1662147178906" duration="2244000" />
+      <workItem from="1662556356186" duration="13524000" />
+      <workItem from="1662592072154" duration="1528000" />
+      <workItem from="1662821620152" duration="927000" />
+      <workItem from="1662930376280" duration="1752000" />
+      <workItem from="1662989814409" duration="2828000" />
+      <workItem from="1663957544166" duration="2070000" />
+      <workItem from="1664015801791" duration="1595000" />
+      <workItem from="1664095414927" duration="2711000" />
+      <workItem from="1664190960039" duration="883000" />
+      <workItem from="1664193267570" duration="874000" />
+      <workItem from="1664209300663" duration="1367000" />
+      <workItem from="1664461064683" duration="561000" />
+      <workItem from="1664461680973" duration="234000" />
+      <workItem from="1666709754632" duration="4252000" />
+      <workItem from="1666717381699" duration="1417000" />
+      <workItem from="1666723566320" duration="610000" />
+      <workItem from="1666733138199" duration="178000" />
+      <workItem from="1666733426752" duration="202000" />
+      <workItem from="1666733924853" duration="600000" />
+      <workItem from="1666737533222" duration="1856000" />
+      <workItem from="1666793072356" duration="1170000" />
+      <workItem from="1666807981544" duration="9304000" />
+      <workItem from="1666882835819" duration="3500000" />
+      <workItem from="1667408894514" duration="928000" />
+      <workItem from="1667579127350" duration="13044000" />
+      <workItem from="1667840090665" duration="682000" />
+      <workItem from="1668445913096" duration="1257000" />
+      <workItem from="1668979476807" duration="616000" />
+      <workItem from="1670380726978" duration="655000" />
+      <workItem from="1671027705900" duration="708000" />
+      <workItem from="1671315849415" duration="685000" />
+      <workItem from="1671829050765" duration="643000" />
+      <workItem from="1671830777782" duration="909000" />
+      <workItem from="1672681925099" duration="453000" />
+      <workItem from="1672699272586" duration="23098000" />
+      <workItem from="1673032303043" duration="9384000" />
+      <workItem from="1673130120301" duration="1852000" />
+      <workItem from="1673192584740" duration="2645000" />
+      <workItem from="1673372770662" duration="659000" />
+      <workItem from="1673905446588" duration="17958000" />
+      <workItem from="1674150928744" duration="722000" />
+      <workItem from="1674690474332" duration="15445000" />
+      <workItem from="1674868373865" duration="2982000" />
+      <workItem from="1674929032049" duration="4793000" />
+      <workItem from="1675011656180" duration="4276000" />
+      <workItem from="1675103505526" duration="1101000" />
+      <workItem from="1675348636229" duration="14047000" />
+      <workItem from="1675434854569" duration="17746000" />
+      <workItem from="1675533698345" duration="10516000" />
+      <workItem from="1675630970792" duration="2435000" />
+      <workItem from="1675709202172" duration="2161000" />
+      <workItem from="1675814848229" duration="8731000" />
+      <workItem from="1675904192013" duration="810000" />
+      <workItem from="1675954597532" duration="319000" />
+      <workItem from="1679622992237" duration="4895000" />
+      <workItem from="1679777042675" duration="560000" />
+      <workItem from="1679832533264" duration="8419000" />
+      <workItem from="1679856590502" duration="8102000" />
+      <workItem from="1679932775296" duration="764000" />
+      <workItem from="1680222230122" duration="6606000" />
+      <workItem from="1680882971941" duration="695000" />
+      <workItem from="1680889912362" duration="1045000" />
+      <workItem from="1681475318481" duration="2108000" />
+      <workItem from="1681737318139" duration="3512000" />
+      <workItem from="1681907937017" duration="1648000" />
+      <workItem from="1682014313458" duration="4911000" />
+      <workItem from="1682103522831" duration="775000" />
+      <workItem from="1682450711025" duration="9413000" />
+      <workItem from="1682469675681" duration="1902000" />
+      <workItem from="1682516684188" duration="3292000" />
+      <workItem from="1683040455937" duration="5928000" />
+      <workItem from="1684088209292" duration="6258000" />
+      <workItem from="1684502906203" duration="7906000" />
+      <workItem from="1684783426760" duration="2403000" />
+      <workItem from="1685034608492" duration="814000" />
+      <workItem from="1687115426732" duration="12728000" />
+      <workItem from="1687544722165" duration="4768000" />
+      <workItem from="1687786916524" duration="6339000" />
+      <workItem from="1688401979252" duration="4661000" />
+      <workItem from="1688571030603" duration="24465000" />
+      <workItem from="1688752740855" duration="940000" />
+      <workItem from="1688924705934" duration="13142000" />
+      <workItem from="1689004445596" duration="40892000" />
+      <workItem from="1689285870906" duration="1212000" />
+      <workItem from="1689345584582" duration="3312000" />
+      <workItem from="1689361768422" duration="22730000" />
+      <workItem from="1690567210941" duration="1630000" />
+      <workItem from="1690749690500" duration="2754000" />
+      <workItem from="1690848026741" duration="2343000" />
+      <workItem from="1690894638604" duration="4764000" />
+      <workItem from="1691078547477" duration="11244000" />
+      <workItem from="1691161170319" duration="540000" />
+      <workItem from="1691168150615" duration="4588000" />
+      <workItem from="1691176473613" duration="3017000" />
+      <workItem from="1691354702339" duration="1149000" />
+      <workItem from="1691421959110" duration="5388000" />
+      <workItem from="1692287781646" duration="877000" />
+      <workItem from="1692305566297" duration="3916000" />
+      <workItem from="1692709744387" duration="1551000" />
+      <workItem from="1693410635569" duration="5562000" />
+      <workItem from="1693499568200" duration="2510000" />
+      <workItem from="1693561693228" duration="3455000" />
+      <workItem from="1693865484033" duration="350000" />
+      <workItem from="1693921393809" duration="2100000" />
+      <workItem from="1694095158302" duration="1186000" />
+      <workItem from="1694096350152" duration="68000" />
+      <workItem from="1694353178875" duration="1425000" />
+      <workItem from="1694432686907" duration="2982000" />
+      <workItem from="1694442630960" duration="231000" />
+      <workItem from="1694449868499" duration="7651000" />
+      <workItem from="1694624901398" duration="279000" />
+      <workItem from="1695039653956" duration="1159000" />
+      <workItem from="1695219166515" duration="1900000" />
+      <workItem from="1695225906920" duration="1678000" />
+      <workItem from="1698089847471" duration="1683000" />
+      <workItem from="1698097600505" duration="444000" />
+    </task>
+    <task id="LOCAL-00109" summary="adding few subject ceiling">
+      <created>1675633161072</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1675633161072</updated>
+    </task>
+    <task id="LOCAL-00110" summary="adding few subject ceiling">
+      <created>1675709383362</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1675709383363</updated>
+    </task>
+    <task id="LOCAL-00111" summary="trying new  ceiling for ANN">
+      <created>1675887257236</created>
+      <option name="number" value="00111" />
+      <option name="presentableId" value="LOCAL-00111" />
+      <option name="project" value="LOCAL" />
+      <updated>1675887257236</updated>
+    </task>
+    <task id="LOCAL-00112" summary="trying new  ceiling for ANN">
+      <created>1675903524793</created>
+      <option name="number" value="00112" />
+      <option name="presentableId" value="LOCAL-00112" />
+      <option name="project" value="LOCAL" />
+      <updated>1675903524793</updated>
+    </task>
+    <task id="LOCAL-00113" summary="trying new  ceiling for ANN">
+      <created>1675904747307</created>
+      <option name="number" value="00113" />
+      <option name="presentableId" value="LOCAL-00113" />
+      <option name="project" value="LOCAL" />
+      <updated>1675904747307</updated>
+    </task>
+    <task id="LOCAL-00114" summary="added pereira subsample benchamarks">
+      <created>1679865711268</created>
+      <option name="number" value="00114" />
+      <option name="presentableId" value="LOCAL-00114" />
+      <option name="project" value="LOCAL" />
+      <updated>1679865711269</updated>
+    </task>
+    <task id="LOCAL-00115" summary="added pereira subsample benchamarks">
+      <created>1680223793750</created>
+      <option name="number" value="00115" />
+      <option name="presentableId" value="LOCAL-00115" />
+      <option name="project" value="LOCAL" />
+      <updated>1680223793750</updated>
+    </task>
+    <task id="LOCAL-00116" summary="changes to om/weka/">
+      <created>1681475972502</created>
+      <option name="number" value="00116" />
+      <option name="presentableId" value="LOCAL-00116" />
+      <option name="project" value="LOCAL" />
+      <updated>1681475972503</updated>
+    </task>
+    <task id="LOCAL-00117" summary="removing gpt-neox defs becuase transformers already has it">
+      <created>1681476709276</created>
+      <option name="number" value="00117" />
+      <option name="presentableId" value="LOCAL-00117" />
+      <option name="project" value="LOCAL" />
+      <updated>1681476709276</updated>
+    </task>
+    <task id="LOCAL-00118" summary="adding gpt-neox-pos-learned config">
+      <created>1681908287631</created>
+      <option name="number" value="00118" />
+      <option name="presentableId" value="LOCAL-00118" />
+      <option name="project" value="LOCAL" />
+      <updated>1681908287631</updated>
+    </task>
+    <task id="LOCAL-00119" summary="adding gpt-neox-pos-learned config">
+      <created>1682450750834</created>
+      <option name="number" value="00119" />
+      <option name="presentableId" value="LOCAL-00119" />
+      <option name="project" value="LOCAL" />
+      <updated>1682450750834</updated>
+    </task>
+    <task id="LOCAL-00120" summary="adding gpt-neox-pos-learned config">
+      <created>1682518369602</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1682518369603</updated>
+    </task>
+    <task id="LOCAL-00121" summary="fixing path for ds_parametric">
+      <created>1682519215094</created>
+      <option name="number" value="00121" />
+      <option name="presentableId" value="LOCAL-00121" />
+      <option name="project" value="LOCAL" />
+      <updated>1682519215094</updated>
+    </task>
+    <task id="LOCAL-00122" summary="added benchmarks for sentence average">
+      <created>1684524361066</created>
+      <option name="number" value="00122" />
+      <option name="presentableId" value="LOCAL-00122" />
+      <option name="project" value="LOCAL" />
+      <updated>1684524361067</updated>
+    </task>
+    <task id="LOCAL-00123" summary="change in setup">
+      <created>1685034673522</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1685034673522</updated>
+    </task>
+    <task id="LOCAL-00124" summary="bugfix">
+      <created>1685034819113</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1685034819113</updated>
+    </task>
+    <task id="LOCAL-00125" summary="adding ridge and PLS regression">
+      <created>1687281861022</created>
+      <option name="number" value="00125" />
+      <option name="presentableId" value="LOCAL-00125" />
+      <option name="project" value="LOCAL" />
+      <updated>1687281861022</updated>
+    </task>
+    <task id="LOCAL-00126" summary="adding ridge and PLS regression">
+      <created>1687550138774</created>
+      <option name="number" value="00126" />
+      <option name="presentableId" value="LOCAL-00126" />
+      <option name="project" value="LOCAL" />
+      <updated>1687550138774</updated>
+    </task>
+    <task id="LOCAL-00127" summary="adding ridge and PLS regression">
+      <created>1687552884925</created>
+      <option name="number" value="00127" />
+      <option name="presentableId" value="LOCAL-00127" />
+      <option name="project" value="LOCAL" />
+      <updated>1687552884925</updated>
+    </task>
+    <task id="LOCAL-00128" summary="adding ridge and PLS regression">
+      <created>1687788815517</created>
+      <option name="number" value="00128" />
+      <option name="presentableId" value="LOCAL-00128" />
+      <option name="project" value="LOCAL" />
+      <updated>1687788815517</updated>
+    </task>
+    <task id="LOCAL-00129" summary="make it to look at all language voxels">
+      <created>1687789772508</created>
+      <option name="number" value="00129" />
+      <option name="presentableId" value="LOCAL-00129" />
+      <option name="project" value="LOCAL" />
+      <updated>1687789772508</updated>
+    </task>
+    <task id="LOCAL-00130" summary="10 splits">
+      <created>1687972521264</created>
+      <option name="number" value="00130" />
+      <option name="presentableId" value="LOCAL-00130" />
+      <option name="project" value="LOCAL" />
+      <updated>1687972521264</updated>
+    </task>
+    <task id="LOCAL-00131" summary="10 splits">
+      <created>1687991196704</created>
+      <option name="number" value="00131" />
+      <option name="presentableId" value="LOCAL-00131" />
+      <option name="project" value="LOCAL" />
+      <updated>1687991196704</updated>
+    </task>
+    <task id="LOCAL-00132" summary="10 splits">
+      <created>1688045627958</created>
+      <option name="number" value="00132" />
+      <option name="presentableId" value="LOCAL-00132" />
+      <option name="project" value="LOCAL" />
+      <updated>1688045627958</updated>
+    </task>
+    <task id="LOCAL-00133" summary="5 splits">
+      <created>1688660848350</created>
+      <option name="number" value="00133" />
+      <option name="presentableId" value="LOCAL-00133" />
+      <option name="project" value="LOCAL" />
+      <updated>1688660848350</updated>
+    </task>
+    <task id="LOCAL-00134" summary="5 splits">
+      <created>1688671026408</created>
+      <option name="number" value="00134" />
+      <option name="presentableId" value="LOCAL-00134" />
+      <option name="project" value="LOCAL" />
+      <updated>1688671026408</updated>
+    </task>
+    <task id="LOCAL-00135" summary="5 splits">
+      <created>1688936954195</created>
+      <option name="number" value="00135" />
+      <option name="presentableId" value="LOCAL-00135" />
+      <option name="project" value="LOCAL" />
+      <updated>1688936954196</updated>
+    </task>
+    <task id="LOCAL-00136" summary="pereira_norm_sentence">
+      <created>1688950897822</created>
+      <option name="number" value="00136" />
+      <option name="presentableId" value="LOCAL-00136" />
+      <option name="project" value="LOCAL" />
+      <updated>1688950897822</updated>
+    </task>
+    <task id="LOCAL-00137" summary="adding double normalzation">
+      <created>1689012687046</created>
+      <option name="number" value="00137" />
+      <option name="presentableId" value="LOCAL-00137" />
+      <option name="project" value="LOCAL" />
+      <updated>1689012687046</updated>
+    </task>
+    <task id="LOCAL-00138" summary="adding double normalzation">
+      <created>1689179164664</created>
+      <option name="number" value="00138" />
+      <option name="presentableId" value="LOCAL-00138" />
+      <option name="project" value="LOCAL" />
+      <updated>1689179164664</updated>
+    </task>
+    <task id="LOCAL-00139" summary="adding double normalzation">
+      <created>1689200888485</created>
+      <option name="number" value="00139" />
+      <option name="presentableId" value="LOCAL-00139" />
+      <option name="project" value="LOCAL" />
+      <updated>1689200888485</updated>
+    </task>
+    <task id="LOCAL-00140" summary="adding double normalzation">
+      <created>1689277916889</created>
+      <option name="number" value="00140" />
+      <option name="presentableId" value="LOCAL-00140" />
+      <option name="project" value="LOCAL" />
+      <updated>1689277916889</updated>
+    </task>
+    <task id="LOCAL-00141" summary="adding normalized pereira">
+      <created>1689282517396</created>
+      <option name="number" value="00141" />
+      <option name="presentableId" value="LOCAL-00141" />
+      <option name="project" value="LOCAL" />
+      <updated>1689282517397</updated>
+    </task>
+    <task id="LOCAL-00142" summary="making_untrained_ln">
+      <created>1689284551934</created>
+      <option name="number" value="00142" />
+      <option name="presentableId" value="LOCAL-00142" />
+      <option name="project" value="LOCAL" />
+      <updated>1689284551934</updated>
+    </task>
+    <task id="LOCAL-00143" summary="bugfix">
+      <created>1689286484223</created>
+      <option name="number" value="00143" />
+      <option name="presentableId" value="LOCAL-00143" />
+      <option name="project" value="LOCAL" />
+      <updated>1689286484223</updated>
+    </task>
+    <task id="LOCAL-00144" summary="adding futrell norms">
+      <created>1689357239677</created>
+      <option name="number" value="00144" />
+      <option name="presentableId" value="LOCAL-00144" />
+      <option name="project" value="LOCAL" />
+      <updated>1689357239677</updated>
+    </task>
+    <task id="LOCAL-00145" summary="adding futrell norms">
+      <created>1689358209843</created>
+      <option name="number" value="00145" />
+      <option name="presentableId" value="LOCAL-00145" />
+      <option name="project" value="LOCAL" />
+      <updated>1689358209843</updated>
+    </task>
+    <task id="LOCAL-00146" summary="bugfix">
+      <created>1689358549024</created>
+      <option name="number" value="00146" />
+      <option name="presentableId" value="LOCAL-00146" />
+      <option name="project" value="LOCAL" />
+      <updated>1689358549024</updated>
+    </task>
+    <task id="LOCAL-00147" summary="bugfix">
+      <created>1689358866834</created>
+      <option name="number" value="00147" />
+      <option name="presentableId" value="LOCAL-00147" />
+      <option name="project" value="LOCAL" />
+      <updated>1689358866834</updated>
+    </task>
+    <task id="LOCAL-00148" summary="bugfix">
+      <created>1689448761884</created>
+      <option name="number" value="00148" />
+      <option name="presentableId" value="LOCAL-00148" />
+      <option name="project" value="LOCAL" />
+      <updated>1689448761884</updated>
+    </task>
+    <task id="LOCAL-00149" summary="adding uniform layer normalization">
+      <created>1689450118879</created>
+      <option name="number" value="00149" />
+      <option name="presentableId" value="LOCAL-00149" />
+      <option name="project" value="LOCAL" />
+      <updated>1689450118879</updated>
+    </task>
+    <task id="LOCAL-00150" summary="adding gpt2_50m">
+      <created>1690567538466</created>
+      <option name="number" value="00150" />
+      <option name="presentableId" value="LOCAL-00150" />
+      <option name="project" value="LOCAL" />
+      <updated>1690567538466</updated>
+    </task>
+    <task id="LOCAL-00151" summary="adding gpt2_50m">
+      <created>1690752492041</created>
+      <option name="number" value="00151" />
+      <option name="presentableId" value="LOCAL-00151" />
+      <option name="project" value="LOCAL" />
+      <updated>1690752492041</updated>
+    </task>
+    <task id="LOCAL-00152" summary="bugfix">
+      <created>1690853439683</created>
+      <option name="number" value="00152" />
+      <option name="presentableId" value="LOCAL-00152" />
+      <option name="project" value="LOCAL" />
+      <updated>1690853439683</updated>
+    </task>
+    <task id="LOCAL-00153" summary="bugfix">
+      <created>1690915858992</created>
+      <option name="number" value="00153" />
+      <option name="presentableId" value="LOCAL-00153" />
+      <option name="project" value="LOCAL" />
+      <updated>1690915858992</updated>
+    </task>
+    <task id="LOCAL-00154" summary="bugfix">
+      <created>1690916398320</created>
+      <option name="number" value="00154" />
+      <option name="presentableId" value="LOCAL-00154" />
+      <option name="project" value="LOCAL" />
+      <updated>1690916398320</updated>
+    </task>
+    <task id="LOCAL-00155" summary="bugfix">
+      <created>1690916566564</created>
+      <option name="number" value="00155" />
+      <option name="presentableId" value="LOCAL-00155" />
+      <option name="project" value="LOCAL" />
+      <updated>1690916566564</updated>
+    </task>
+    <task id="LOCAL-00156" summary="bugfix">
+      <created>1690921654969</created>
+      <option name="number" value="00156" />
+      <option name="presentableId" value="LOCAL-00156" />
+      <option name="project" value="LOCAL" />
+      <updated>1690921654969</updated>
+    </task>
+    <task id="LOCAL-00157" summary="bugfix">
+      <created>1691097711201</created>
+      <option name="number" value="00157" />
+      <option name="presentableId" value="LOCAL-00157" />
+      <option name="project" value="LOCAL" />
+      <updated>1691097711201</updated>
+    </task>
+    <option name="localTasksCounter" value="172" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Adding ANN to main" />
+    <MESSAGE value="Adding ANN version 2 to main" />
+    <MESSAGE value="Adding langloc version 2 to main" />
+    <MESSAGE value="adding few subject ceiling" />
+    <MESSAGE value="trying new  ceiling for ANN" />
+    <MESSAGE value="added pereira subsample benchamarks" />
+    <MESSAGE value="changes to om/weka/" />
+    <MESSAGE value="removing gpt-neox defs becuase transformers already has it" />
+    <MESSAGE value="adding gpt-neox-pos-learned config" />
+    <MESSAGE value="fixing path for ds_parametric" />
+    <MESSAGE value="added benchmarks for sentence average" />
+    <MESSAGE value="change in setup" />
+    <MESSAGE value="adding ridge and PLS regression" />
+    <MESSAGE value="make it to look at all language voxels" />
+    <MESSAGE value="10 splits" />
+    <MESSAGE value="5 splits" />
+    <MESSAGE value="pereira_norm_sentence" />
+    <MESSAGE value="adding double normalzation" />
+    <MESSAGE value="adding normalized pereira" />
+    <MESSAGE value="making_untrained_ln" />
+    <MESSAGE value="adding futrell norms" />
+    <MESSAGE value="adding uniform layer normalization" />
+    <MESSAGE value="adding gpt2_50m" />
+    <MESSAGE value="bugfix" />
+    <MESSAGE value="adding RSA analysis" />
+    <option name="LAST_COMMIT_MESSAGE" value="adding RSA analysis" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py</url>
+          <line>1357</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/rdm.py</url>
+          <line>91</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py</url>
+          <line>1353</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/rdm.py</url>
+          <line>54</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/neural_nlp_2022/lib/python3.7/site-packages/brainscore/metrics/rdm.py</url>
+          <line>74</line>
+          <option name="timeStamp" value="11" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py</url>
+          <line>1231</line>
+          <option name="timeStamp" value="16" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py</url>
+          <line>1233</line>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$run_neural_nlp_on_benchmark_testing.coverage" NAME="run_neural_nlp_on_benchmark_testing Coverage Results" MODIFIED="1692305885918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$run_neural_nlp_behavioral_on_model_manually.coverage" NAME="run_neural_nlp_behavioral_on_model_manually Coverage Results" MODIFIED="1689277629402" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$test_neural_nlp_pipeline.coverage" NAME="neural_nlp_pipeline_debug Coverage Results" MODIFIED="1647878632677" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$run_neural_nlp_on_model_manually.coverage" NAME="run_neural_nlp_on_model_manually Coverage Results" MODIFIED="1694513130973" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$pytest_in_test_neural_nlp_pipeline_py.coverage" NAME="pytest in test_neural_nlp_pipeline.py Coverage Results" MODIFIED="1647877427557" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$scratch_3.coverage" NAME="scratch_3 Coverage Results" MODIFIED="1646928710495" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$analyze_tokenizer_for_transformers.coverage" NAME="analyze_tokenizer_for_transformers Coverage Results" MODIFIED="1647877404059" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neural_nlp/analyze" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$neural_nlp_pipeline_debug.coverage" NAME="neural_nlp_pipeline_debug Coverage Results" MODIFIED="1673036605014" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+</project>
