@@ -39,12 +39,45 @@ from sklearn.linear_model import RidgeCV
 import scipy.stats as stats
 import rsatoolbox.data as rsd
 from neural_nlp.benchmarks.metric.rsa.metric import XarrayRSA, rsa_correlation
+import os
+
+
+#########################
+### SETUP
+#########################
+
+
+if getpass.getuser() == 'eghbalhosseini':
+    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
+    fMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+
+elif getpass.getuser() == 'ehoseini':
+    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
+    fMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
+
+elif getpass.getuser() == 'ckauf':
+    fMRI_PARENT = '/om2/vast/evlab/ckauf/contextualization-nnlp/fmri_DNN/outputs'
+
+
+_logger = logging.getLogger(__name__)
+
+
+
+#########################
+### BASIC FUNCTIONS
+#########################
+
 def rgcv_linear_regression(xarray_kwargs=None):
     regression = RidgeCV(
             alphas=[1e-3, 0.01, 0.1, 1, 10, 100])
     xarray_kwargs = xarray_kwargs or {}
     regression = XarrayRegression(regression, **xarray_kwargs)
     return regression
+
 
 def rgcv_linear_pearsonr(*args, regression_kwargs=None, correlation_kwargs=None, **kwargs):
     regression = rgcv_linear_regression(regression_kwargs or {})
@@ -53,99 +86,6 @@ def rgcv_linear_pearsonr(*args, regression_kwargs=None, correlation_kwargs=None,
             *args, regression=regression, correlation=correlation,
             **kwargs)
 
-if getpass.getuser() == 'eghbalhosseini':
-    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
-    DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-
-elif getpass.getuser() == 'ehoseini':
-    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
-    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
-    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
-    DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
-
-
-_logger = logging.getLogger(__name__)
-
-
-class Invert:
-    def __init__(self, metric):
-        self._metric = metric
-
-    def __call__(self, source, target):
-        source, target = target, source
-        return self._metric(source, target)
-
-
-class StoriesRDMBenchmark:
-    def __init__(self, bold_shift=4):
-        assemblies = self._load_rdms(bold_shift_seconds=bold_shift)
-        assemblies = {story: rdm for story, rdm in assemblies.items() if story != 'Elvis'}
-        self._target_assemblies = assemblies
-        self._metric = RDMSimilarityCrossValidated()
-        self._cross_region = CartesianProduct(dividers=['region'])
-
-    def _load_rdms(self, roi_filter='from90to100', bold_shift_seconds=4):
-        assemblies = {}
-        for story in ['Boar', 'KingOfBirds', 'Elvis', 'HighSchool', 'MatchstickSeller']:
-            assembly = load_rdm_sentences(story=story, roi_filter=roi_filter, bold_shift_seconds=bold_shift_seconds)
-            assembly = assembly.mean(dim='subject')
-            stimulus_set_identifier = f'naturalistic-neural-reduced.{story}'
-            stimulus_set = load_stimuli(stimulus_set_identifier)
-            stimulus_set = StimulusSet({'sentence': stimulus_set})
-            stimulus_set.name = stimulus_set_identifier
-            assembly.attrs['stimulus_set'] = stimulus_set
-            assemblies[story] = assembly
-        return assemblies
-
-    def __call__(self, candidate):
-        scores = []
-        for story, story_assembly in self._target_assemblies.items():
-            source_assembly = candidate(stimuli=story_assembly.stimulus_set)
-            score = self._cross_region(story_assembly,
-                                       apply=lambda region_assembly: self._metric(source_assembly, region_assembly))
-            score = score.expand_dims('story')
-            score['story'] = [story]
-            scores.append(score)
-        score = Score.merge(*scores)
-        score = apply_aggregate(lambda score: score.mean('story'), score)
-        score = apply_aggregate(lambda score: score.mean('region'), score)
-        return score
-
-class RDMSimilarityCrossValidated:
-    # adapted from
-    # https://github.com/brain-score/brain-score/blob/3d59d7a841fca63a5d346e599143f547560b5082/brainscore/metrics/rdm.py#L8
-
-    class LeaveOneOutWrapper:
-        def __init__(self, metric):
-            self._metric = metric
-
-        def __call__(self, train_source, train_target, test_source, test_target):
-            # compare assemblies for a single split. we ignore the 10% train ("leave-one-out") and only use test.
-            score = self._metric(test_source, test_target)
-            return DataAssembly(score)
-
-    def __init__(self, stimulus_coord='stimulus_sentence'):
-        self._rdm = RDM()
-        self._similarity = RDMSimilarity(comparison_coord=stimulus_coord)
-        self._cross_validation = CrossValidation(test_size=.9,  # leave 10% out
-                                                 split_coord=stimulus_coord, stratification_coord=None)
-
-    def __call__(self, model_activations, target_rdm):
-        model_activations = align(model_activations, target_rdm, on='stimulus_sentence')
-        model_rdm = self._rdm(model_activations)
-        values = model_rdm.values
-        if np.isnan(values.flatten()).any():
-            warnings.warn(f"{np.isnan(values.flatten()).sum()} nan values found in model rdm - setting to 0")
-            values[np.isnan(values)] = 0
-            model_rdm = type(model_rdm)(values, coords={coord: (dims, vals) for coord, dims, vals in
-                                                        walk_coords(model_rdm)}, dims=model_rdm.dims)
-        leave_one_out = self.LeaveOneOutWrapper(self._similarity)
-        # multi-dimensional coords with repeated dimensions not yet supported in CrossValidation
-        drop_coords = [coord for coord, dims, value in walk_coords(target_rdm) if dims == ('stimulus', 'stimulus')]
-        target_rdm = target_rdm.drop(drop_coords)
-        return self._cross_validation(model_rdm, target_rdm, apply=leave_one_out)
 
 def align(source, target, on):
     source_values, target_values = source[on].values.tolist(), target[on].values
@@ -156,209 +96,129 @@ def align(source, target, on):
     aligned = source.isel(**dim_indices)
     return aligned
 
-class Blank2014VoxelEncoding(Benchmark):
+
+def listen_to(candidate, stimulus_set, reset_column='story', average_sentence=True):
     """
-    data source:
-        Blank et al., Journal of Neurophysiology 2014
-        https://journals.physiology.org/doi/full/10.1152/jn.00884.2013
+    Pass a `stimulus_set` through a model `candidate`.
+    Operates on a sentence-based `stimulus_set`.
     """
+    activations = []
+    for story in ordered_set(stimulus_set[reset_column].values):
+        story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
+        story_stimuli.name = f"{stimulus_set.name}-{story}"
+        story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
+        activations.append(story_activations)
+    model_activations = merge_data_arrays(activations)
+    #model_activations = xr.concat(activations, dim='presentation')
+    # merging does not maintain stimulus order. the following orders again
+    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
+    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+    model_activations = model_activations[{'presentation': idx}]
+    return model_activations
 
-    def __init__(self, identifier, bold_shift=4):
-        self._identifier = identifier
-        assembly = LazyLoad(lambda: self._load_assembly(bold_shift))
-        self._target_assembly = assembly
-        regression = linear_regression(xarray_kwargs=dict(
-            stimulus_coord='stimulus_id', neuroid_coord='neuroid_id'))
-        correlation = pearsonr_correlation(xarray_kwargs=dict(
-            correlation_coord='stimulus_id', neuroid_coord='neuroid_id'))
-        self._metric = CrossRegressedCorrelation(
-            regression=regression, correlation=correlation,
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord='story'))
-
-        self._ceiler = ExtrapolationCeiling(subject_column='subject_UID', post_process=self.post_process_ceilings)
-
-    @property
-    def identifier(self):
-        return self._identifier
-
-    def _load_assembly(self, bold_shift):
-        assembly = load_voxels(bold_shift_seconds=bold_shift)
-        return assembly
-
-    def post_process_ceilings(self, scores):
-        if not hasattr(scores, 'neuroid_id'):
-            scores['neuroid_id'] = 'neuroid', [".".join([str(value) for value in values]) for values in zip(*[
-                scores[coord].values for coord in ['subject_UID', 'fROI_area']])]
-        return scores
-
-    @property
-    def ceiling(self):
-        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
-
-    def __call__(self, candidate):
-        _logger.info('Computing activations')
-        model_activations = listen_to(candidate, self._target_assembly.attrs['stimulus_set'])
-        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
-        _logger.info('Scoring model')
-        score = self.apply_metric(model_activations, self._target_assembly)
-        score = self.ceiling_normalize(score)
-        return score
-
-    def apply_metric(self, model_activations, target_assembly):
-        return self._metric(model_activations, target_assembly)
-
-    def ceiling_normalize(self, score):
-        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
-        score = ceil_neuroids(raw_neuroids, self.ceiling, subject_column='subject_UID')
-        return score
-
-class Blank2014fROIEncoding(Blank2014VoxelEncoding):
+    
+def read_words(candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
     """
-    data source:
-        Blank et al., Journal of Neurophysiology 2014
-        https://journals.physiology.org/doi/full/10.1152/jn.00884.2013
+    Pass a `stimulus_set` through a model `candidate`.
+    In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
     """
+    # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+    activations = []
+    for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+        part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+        # stimulus_ids = part_stimuli['stimulus_id']
+        sentence_stimuli = StimulusSet({'sentence': ' '.join(part_stimuli['word']),
+                                        reset_column: list(set(part_stimuli[reset_column]))})
+        sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
+        sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+        for column in copy_columns:
+            sentence_activations[column] = ('presentation', part_stimuli[column])
+        activations.append(sentence_activations)
 
-    def __init__(self, *args, **kwargs):
-        super(Blank2014fROIEncoding, self).__init__(*args, **kwargs)
+    #model_activations = merge_data_arrays(activations)
+    model_activations = xr.concat(activations, dim='presentation')
+    # merging does not maintain stimulus order. the following orders again
+    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
+    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+    model_activations = model_activations[{'presentation': idx}]
 
-        regression = linear_regression(xarray_kwargs=dict(
-            stimulus_coord='stimulus_id', neuroid_coord='fROI_area'))
-        correlation = pearsonr_correlation(xarray_kwargs=dict(
-            correlation_coord='stimulus_id', neuroid_coord='fROI_area'))
-        self._metric = CrossRegressedCorrelation(
-            regression=regression, correlation=correlation,
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord='story'))
+    return model_activations
 
-    @load_s3(key='Blank2014fROI')
-    def _load_assembly(self, bold_shift):
-        assembly = super(Blank2014fROIEncoding, self)._load_assembly(bold_shift)
-        assembly = self.average_subregions(bold_shift=bold_shift, assembly=assembly)
-        return assembly
 
-    @store(identifier_ignore=['assembly'])
-    def average_subregions(self, bold_shift, assembly):
-        attrs = assembly.attrs
-        del assembly['threshold']
-        # group by stimuli, fROI, subject after one another.
-        # this gets rid of adjacent coords unfortunately, but we accept that for now.
-        averaged_assembly = assembly.groupby('stimulus_id').apply(
-            lambda stimulus_group: stimulus_group.groupby('fROI_area').apply(
-                lambda fROI_group: fROI_group.groupby('subject_UID').mean()
-            ))
-        averaged_assembly = averaged_assembly.stack(presentation=['stimulus_id'], neuroid=['fROI_area', 'subject_UID'])
-        # copy presentation coords back since those are needed for e.g. metric stratification
-        order = [averaged_assembly['stimulus_id'].values.tolist().index(stimulus_id)
-                 for stimulus_id in assembly['stimulus_id'].values]
-        for copy_coord, dims, copy_value in walk_coords(assembly):
-            if not array_is_element(dims, 'presentation') or hasattr(averaged_assembly, copy_coord):
-                continue
-            averaged_assembly[copy_coord] = dims, copy_value[order]
-        averaged_assembly.attrs = attrs
-        averaged_assembly['neuroid_id'] = 'neuroid', [".".join([str(value) for value in values]) for values in zip(*[
-            averaged_assembly[coord].values for coord in ['subject_UID', 'fROI_area']])]
-        return averaged_assembly
+def aggregate(score, combine_layers=True):
+    if hasattr(score, 'experiment') and score['experiment'].ndim > 0:
+        score = score.mean('experiment')
+    if hasattr(score, 'atlas') and score['atlas'].ndim > 0:
+        score = score.mean('atlas')
+    if hasattr(score, 'layer') and score['layer'].ndim > 0 and combine_layers:
+        score_core = score.sel(aggregation='center') if hasattr(score, 'aggregation') else score
+        max_score = score_core.max()
+        max_score = score[{'layer': (score_core == max_score).values}]
+        if len(max_score['layer']) > 1:  # multiple layers achieved exactly the same score
+            layer_index = max_score['layer'].values[0].tolist().index(max_score['layer'].values[0])  # choose first one
+            max_score = max_score.isel(layer=[layer_index])
+        max_score = max_score.squeeze('layer', drop=True)
+        max_score.attrs['raw'] = score.copy()
+        score = max_score
+    return score
 
-    @property
-    @load_s3(key='Blank2014fROI-encoding-ceiling')
-    def ceiling(self):
-        return super(Blank2014fROIEncoding, self).ceiling
 
-class Blank2014SentencefROIEncoding(Blank2014fROIEncoding):
-    def __init__(self, *args, sentence_num, **kwargs):
-        super(Blank2014SentencefROIEncoding, self).__init__(*args, **kwargs)
-        self.sentence_num = sentence_num
+def ceil_neuroids(raw_neuroids, ceiling, subject_column='subject'):
+    ceiled_neuroids = consistency_neuroids(raw_neuroids, ceiling.raw)
+    ceiled_neuroids.attrs['raw'] = raw_neuroids
+    ceiled_neuroids.attrs['ceiling'] = ceiling.raw
+    score = aggregate_neuroid_scores(ceiled_neuroids, subject_column)
+    score.attrs['ceiling'] = ceiling
+    score.attrs['description'] = "per-neuroid ceiling-normalized score"
+    return score
 
-    def _load_assembly(self, bold_shift):
-        assembly = super(Blank2014fROIEncoding, self)._load_assembly(bold_shift)
-        # choose only up to nth sentence
-        # stimulus_id is ['story', 'sentence_num', 'sentence_part']
-        assembly = assembly[{'presentation': [
-            int(stimulus_id.split('.')[1]) == self.sentence_num
-            for stimulus_id in assembly['stimulus_id'].values]}]
-        return assembly
 
-    def __call__(self, candidate):
-        _logger.info('Computing activations')
-        model_activations = listen_to(candidate, self._target_assembly.attrs['stimulus_set'])
-        assert all(stimulus_id in set(model_activations['stimulus_id'].values)
-                   for stimulus_id in set(self._target_assembly['stimulus_id'].values))
-        _logger.info('Scoring model')
-        score = self.apply_metric(model_activations, self._target_assembly)
-        score = self.ceiling_normalize(score)
-        return score
+def aggregate_neuroid_scores(neuroid_scores, subject_column):
+    subject_scores = neuroid_scores.groupby(subject_column).median()
+    center = subject_scores.median(subject_column)
+    subject_values = np.nan_to_num(subject_scores.values, nan=0)  # mad cannot deal with all-nan in one axis, treat as 0
+    subject_axis = subject_scores.dims.index(subject_scores[subject_column].dims[0])
+    error = median_absolute_deviation(subject_values, axis=subject_axis)
+    score = Score([center, error], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
+    score.attrs['raw'] = neuroid_scores
+    score.attrs['description'] = "score aggregated by taking median of neuroids per subject, " \
+                                 "then median of subject scores"
+    return score
 
-    def apply_metric(self, model_activations, target_assembly):
-        stimulus_ids = set(self._target_assembly['stimulus_id'].values)
-        model_activations = model_activations[{'presentation': [
-            stimulus_id in stimulus_ids for stimulus_id in model_activations['stimulus_id'].values]}]
-        return super(Blank2014SentencefROIEncoding, self).apply_metric(model_activations, target_assembly)
 
-    def ceiling_normalize(self, score):
-        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
-        if not hasattr(raw_neuroids, 'neuroid_id'):
-            raw_neuroids['neuroid_id'] = 'neuroid', [".".join([str(value) for value in values]) for values in zip(*[
-                raw_neuroids[coord].values for coord in ['subject_UID', 'fROI_area']])]
-        score = ceil_neuroids(raw_neuroids, self.ceiling, subject_column='subject_UID')
-        return score
+def consistency_neuroids(neuroids, ceiling_neuroids):
+    if 'neuroid_id' in ceiling_neuroids.dims:
+        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
+    elif 'neuroid' in ceiling_neuroids.dims:
+        assert set(neuroids['neuroid'].values) == set(ceiling_neuroids['neuroid'].values)
+    ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
+                                                     for neuroid_id in neuroids['neuroid_id'].values]}]  # align
+    ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
+    values = consistency(neuroids.values, ceiling_neuroids.values)
+    neuroids = type(neuroids)(values, coords={coord: (dims, values) for coord, dims, values in walk_coords(neuroids)},
+                              dims=neuroids.dims)
+    return neuroids
 
-class Blank2014fROIRDM(Blank2014fROIEncoding):
-    """
-    data source:
-        Blank et al., Journal of Neurophysiology 2014
-        https://journals.physiology.org/doi/full/10.1152/jn.00884.2013
-    """
 
-    def __init__(self, *args, **kwargs):
-        super(Blank2014fROIRDM, self).__init__(*args, **kwargs)
-        self._metric = RDMCrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None, splits=5,
-                                        kfold=True, test_size=None))
-        self._ceiler.extrapolation_dimension = 'subject_UID'
-        self._cross = CartesianProduct(dividers=['subject_UID'])
+def aggregate_ceiling(neuroid_scores, ceiling, subject_column='subject'):
+    aggregate_raw = aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
+    score = consistency(aggregate_raw, ceiling.sel(aggregation='center'))
+    score.attrs['raw'] = aggregate_raw
+    score.attrs['ceiling'] = ceiling
+    score.attrs['description'] = "ceiling-normalized score"
+    return score
 
-    def apply_metric(self, source_assembly, target_assembly):
-        # transformation sub-selection would be left with only one coordinate for the neuroid dimension
-        # to work around this, we add another coord that will prevent the MultiIndex from collapsing
-        if not hasattr(target_assembly, 'neuroid_id'):
-            target_assembly['neuroid_id'] = 'neuroid', target_assembly['subject_UID'].values
-        target_assembly = target_assembly.__class__(target_assembly)  # reconstruct to ensure proper indexing
-        cross_scores = self._cross(target_assembly, apply=
-        lambda cross_assembly: super(Blank2014fROIRDM, self).apply_metric(source_assembly, cross_assembly))
-        score = cross_scores.median(['subject_UID'])
-        score.attrs['raw'] = cross_scores
-        return score
 
-    @property
-    @load_s3(key='Blank2014fROI-rdm-ceiling')
-    def ceiling(self):
-        return super(Blank2014fROIRDM, self).ceiling
+def consistency(score, ceiling):
+    return score / ceiling
 
-    def ceiling_normalize(self, score):
-        score = aggregate_ceiling(score.raw, ceiling=self.ceiling, subject_column='subject_UID')
-        return score
 
-    def post_process_ceilings(self, scores):
-        return scores
+#########################
+### BENCHMARKS (NO AUD)
+#########################
 
-class Blank2014fROICKA(Blank2014fROIRDM):
-    """
-    data source:
-        Blank et al., Journal of Neurophysiology 2014
-        https://journals.physiology.org/doi/full/10.1152/jn.00884.2013
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Blank2014fROICKA, self).__init__(*args, **kwargs)
-        self._metric = CKACrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None, splits=5,
-                                        kfold=True, test_size=None))
-
-    @property
-    def ceiling(self):
-        return super(Blank2014VoxelEncoding, self).ceiling
 
 class _PereiraBenchmark(Benchmark):
     """
@@ -493,75 +353,7 @@ class _PereiraBenchmark(Benchmark):
             # use only a subset of subjects
             return self._rng.choice(list(subjects), size=self._num_bootstraps)
 
-def listen_to(candidate, stimulus_set, reset_column='story', average_sentence=True):
-    """
-    Pass a `stimulus_set` through a model `candidate`.
-    Operates on a sentence-based `stimulus_set`.
-    """
-    activations = []
-    for story in ordered_set(stimulus_set[reset_column].values):
-        story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
-        story_stimuli.name = f"{stimulus_set.name}-{story}"
-        story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
-        activations.append(story_activations)
-    model_activations = merge_data_arrays(activations)
-    # merging does not maintain stimulus order. the following orders again
-    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
-           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
-    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-    model_activations = model_activations[{'presentation': idx}]
-    return model_activations
 
-
-def listen_to_v2(candidate, stimulus_set, reset_column='story', average_sentence=True):
-    """
-    Pass a `stimulus_set` through a model `candidate`.
-    Operates on a sentence-based `stimulus_set`.
-    """
-    activations = []
-    for story in ordered_set(stimulus_set[reset_column].values):
-        story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
-        story_stimuli.name = f"listen_to_{stimulus_set.name}-{story}"
-        story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
-        if average_sentence==False:
-            # picke up the last word of each sentence
-            story_activations = story_activations[{'presentation':[-1]}]
-        activations.append(story_activations)
-    model_activations = merge_data_arrays(activations)
-    # merging does not maintain stimulus order. the following orders again
-    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
-           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
-    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-    model_activations = model_activations[{'presentation': idx}]
-    return model_activations
-
-def read_words(candidate, stimulus_set, reset_column='sentence_id', copy_columns=(), average_sentence=False):
-    """
-    Pass a `stimulus_set` through a model `candidate`.
-    In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
-    """
-    # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
-    activations = []
-    for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
-        part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
-        # stimulus_ids = part_stimuli['stimulus_id']
-        sentence_stimuli = StimulusSet({'sentence': ' '.join(part_stimuli['word']),
-                                        reset_column: list(set(part_stimuli[reset_column]))})
-        sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
-        sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
-        for column in copy_columns:
-            sentence_activations[column] = ('presentation', part_stimuli[column])
-        activations.append(sentence_activations)
-
-    #model_activations = merge_data_arrays(activations)
-    model_activations = xr.concat(activations, dim='presentation')
-    # merging does not maintain stimulus order. the following orders again
-    idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
-           itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
-    assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-    model_activations = model_activations[{'presentation': idx}]
-
-    return model_activations
 
 class PereiraEncoding(_PereiraBenchmark):
     """
@@ -581,6 +373,7 @@ class PereiraEncoding(_PereiraBenchmark):
     @load_s3(key='Pereira2018-encoding-ceiling')
     def ceiling(self):
         return super(PereiraEncoding, self).ceiling
+
 
 class PereiraSamplerEncoding(_PereiraBenchmark):
     """
@@ -615,7 +408,7 @@ class PereiraSamplerEncoding(_PereiraBenchmark):
         target_assembly = self._target_assembly.sel(presentation=self._target_assembly['optim_sentence'])
         # select rows from model_activations based on target_assembly
         model_activations = model_activations.sel(presentation=model_activations['stimulus_id'].isin(target_assembly['stimulus_id']))
-        # make sure the sentence_id dimension is the same between the two
+        # make sure the stimulus_id dimension is the same between the two
         assert set(model_activations['stimulus_id'].values) == set(target_assembly['stimulus_id'].values)
         _logger.info('Scoring across experiments & atlases')
         # update self._target_assembly with target_assembly
@@ -634,17 +427,21 @@ class PereiraSamplerEncoding(_PereiraBenchmark):
         score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
         return score
 
+
 class PereiraSamplerMaxEncoding(PereiraSamplerEncoding):
     def _load_assembly(self,version='max'):
         return super()._load_assembly(version='max')
+
 
 class PereiraSamplerMinEncoding(PereiraSamplerEncoding):
     def _load_assembly(self,version='min'):
         return super()._load_assembly(version='min')
 
+
 class PereiraSamplerRandEncoding(PereiraSamplerEncoding):
     def _load_assembly(self,version='rand'):
         return super()._load_assembly(version='rand')
+
 
 class PereiraSamplerV2Encoding(_PereiraBenchmark):
     """
@@ -670,17 +467,21 @@ class PereiraSamplerV2Encoding(_PereiraBenchmark):
     def ceiling(self):
         return super(PereiraSamplerV2Encoding, self).ceiling
 
+
 class PereiraSamplerMaxV2Encoding(PereiraSamplerV2Encoding):
     def _load_assembly(self,version='max'):
         return super()._load_assembly(version='max')
+
 
 class PereiraSamplerMinV2Encoding(PereiraSamplerV2Encoding):
     def _load_assembly(self,version='min'):
         return super()._load_assembly(version='min')
 
+
 class PereiraSamplerRandV2Encoding(PereiraSamplerV2Encoding):
     def _load_assembly(self,version='rand'):
         return super()._load_assembly(version='rand')
+
 
 class PereiraNormalizedEncoding(_PereiraBenchmark):
     """
@@ -773,95 +574,35 @@ class PereiraNormalizedEncoding_V2(PereiraNormalizedEncoding):
         score = aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
         return score
 
-class _PereiraSubjectWise(_PereiraBenchmark):
-    def __init__(self, **kwargs):
-        super(_PereiraSubjectWise, self).__init__(**kwargs)
-        self._cross = CartesianProduct(dividers=['experiment', 'atlas', 'subject'])
-        self._ceiler = self.PereiraSubjectWiseExtrapolationCeiling(
-            extrapolation_dimension='subject', subject_column='subject', num_bootstraps=self._ceiler.num_bootstraps)
 
-    def _apply_cross(self, source_assembly, cross_assembly):
-        # some subjects have only done one experiment which leads to nans
-        cross_assembly = cross_assembly.dropna('neuroid')
-        if len(cross_assembly['neuroid']) == 0:
-            return Score([np.nan, np.nan], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
-        return super(_PereiraSubjectWise, self)._apply_cross(
-            source_assembly=source_assembly, cross_assembly=cross_assembly)
 
-    def _average_cross_scores(self, cross_scores):
-        return super(_PereiraSubjectWise, self)._average_cross_scores(cross_scores).median('subject')
+#########################
+### BENCHMARKS (AUDITORY)
+#########################
 
-    class PereiraSubjectWiseExtrapolationCeiling(_PereiraBenchmark.PereiraExtrapolationCeiling):
-        def post_process(self, scores):
-            return scores.mean('sub_experiment').sel(aggregation='center')
+#specify split coordinate for cross-validation
+if os.getenv('SPLIT_AT_PASSAGE', '0') == '1':
+    try:
+        print("THIS SPLITS AT *ORIGINAL* PASSAGE ID")
+        pereira_split_coord = 'old_stimulus_passage_index'
+    except:
+        print("THIS SPLITS AT *NEW* PASSAGE ID")
+        pereira_split_coord = 'stimulus_passage_index'
+elif os.getenv('SPLIT_AT_TOPIC', '0') == '1':
+    pereira_split_coord = 'stimulus_passage_category'
+else:
+    pereira_split_coord = 'stimulus_id'
 
-        def extrapolate(self, ceilings):
-            # skip parent implementation, go straight to parent's parent
-            return super(_PereiraBenchmark.PereiraExtrapolationCeiling, self).extrapolate(ceilings)
-
-class PereiraDecoding(_PereiraSubjectWise):
-    """
-    data source:
-        Pereira et al., nature communications 2018
-        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
-    """
-
-    def __init__(self, **kwargs):
-        metric = CrossRegressedCorrelation(
-            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
-            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None))
-        metric = Invert(metric)
-        super(PereiraDecoding, self).__init__(metric=metric, **kwargs)
-
-class PereiraRDM(_PereiraSubjectWise):
-    """
-    data source:
-        Pereira et al., nature communications 2018
-        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
-    """
-
-    def __init__(self, **kwargs):
-        metric = RDMCrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None, splits=5,
-                                        kfold=True, test_size=None))
-        super(PereiraRDM, self).__init__(metric=metric, **kwargs)
-
-    @property
-    @load_s3(key='Pereira2018-rdm-ceiling')
-    def ceiling(self):
-        return super(PereiraRDM, self).ceiling
-
-class PereiraCKA(_PereiraSubjectWise):
-    """
-    data source:
-        Pereira et al., nature communications 2018
-        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
-    """
-
-    def __init__(self, **kwargs):
-        metric = CKACrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord=None, splits=5,
-                                        kfold=True, test_size=None))
-        super(PereiraCKA, self).__init__(metric=metric, **kwargs)
-
-    @property
-    def ceiling(self):
-        return super(_PereiraSubjectWise, self).ceiling
-
+_logger.info(f"\nCross validation split coordinate is {pereira_split_coord}\n")
 
 class _Pereira2023audBenchmark(Benchmark):
     """
-    data source:
-        Pereira et al., nature communications 2018
-        https://www.nature.com/articles/s41467-018-03068-4
+    NEW AUDITORY PEREIRA EXPERIMENT
     """
 
-    def __init__(self, identifier, metric,version='sent',reset_column='sentence_id', threshold=90):
+    def __init__(self, identifier, metric, version='sent', reset_column='stimulus_id', threshold=90):
         self._identifier = identifier
-        assembly = self._load_assembly( threshold=threshold,version=version)
+        assembly = self._load_assembly(threshold=threshold, version=version)
         self._target_assembly = assembly
         self._single_metric = metric
         self._reset_column = reset_column
@@ -913,7 +654,12 @@ class _Pereira2023audBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='sent', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+        try:
+            assembly = pd.read_pickle(f'{fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_CK.pkl')
+            _logger.warning(f'Using the following assembly file: {fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_CK.pkl')
+        except:
+            assembly = pd.read_pickle(f'{fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+            _logger.warning(f'Using the following assembly file: {fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -944,7 +690,6 @@ class _Pereira2023audBenchmark(Benchmark):
                                     'stim_name': assembly['stim_name'].values,
                                     'experiment': assembly['experiment'].values,
                                     'stumulus': assembly['stimulus'].values,
-                                    'sentence_id': assembly['stimulus_id'].values,
                                     'stimulus_passage_category_id': assembly['stimulus_passage_category_id'].values})
         # attach stimulus set as an attribute to the assembly
         # add name to stimulus set
@@ -1018,20 +763,22 @@ class _Pereira2023audBenchmark(Benchmark):
                                      "then median of subject scores"
         return score
 
+
 class Pereira2023audRidgeEncoding(_Pereira2023audBenchmark):
     def __init__(self, **kwargs):
         metric = CrossRegressedCorrelation(
             regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord=pereira_split_coord, stratification_coord=None))
         super(Pereira2023audRidgeEncoding, self).__init__(metric=metric, **kwargs)
+
 
 class Pereira2023audV2RidgeEncoding(_Pereira2023audBenchmark):
     def __init__(self, **kwargs):
         metric = CrossRegressedCorrelation(
             regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord=pereira_split_coord, stratification_coord=None))
         super(Pereira2023audRidgeEncoding, self).__init__(metric=metric, **kwargs)
     def __call__(self, candidate):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
@@ -1059,16 +806,18 @@ class Pereira2023audV2RidgeEncoding(_Pereira2023audBenchmark):
         score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
         return score
 
+
 class Pereira2023audSentRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
-        super(Pereira2023audSentRidgeEncoding, self).__init__(reset_column='sentence_id',**kwargs)
+        super(Pereira2023audSentRidgeEncoding, self).__init__(reset_column='stimulus_id',**kwargs)
     def _load_assembly(self,version='sent',threshold=90):
         return super()._load_assembly(version='sent',threshold=90)
 
 # class Pereira2023audPassRidgeEncoding(Pereira2023audRidgeEncoding):
 #     def _load_assembly(self,version='pass',threshold=90):
 #         return super()._load_assembly(version='pass',threshold=90)
-    
+
+
 class Pereira2023audPassPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audPassPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
@@ -1078,36 +827,37 @@ class Pereira2023audPassPassageRidgeEncoding(Pereira2023audRidgeEncoding):
    
 class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
-        super(Pereira2023audPassSentenceRidgeEncoding, self).__init__(reset_column='sentence_id',**kwargs)
+        super(Pereira2023audPassSentenceRidgeEncoding, self).__init__(reset_column='stimulus_id',**kwargs)
     def _load_assembly(self, version='pass', threshold=90):
         return super()._load_assembly(version='pass', threshold=90)
 
-    def _get_model_activations(self, candidate, reset_column='sentence_id',
-                               copy_columns=['sentence_id']):
-        return super()._get_model_activations(candidate, reset_column='sentence_id',
+    def _get_model_activations(self, candidate, reset_column='stimulus_id',
+                               copy_columns=['stimulus_id']):
+        return super()._get_model_activations(candidate, reset_column='stimulus_id',
                                               copy_columns=['stimulus_id'])
 
 class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
-        super(Pereira2023audSentSentenceRidgeEncoding, self).__init__(reset_column='stim_name',**kwargs)
+        super(Pereira2023audSentSentenceRidgeEncoding, self).__init__(reset_column='stimulus_id',**kwargs)
     def _load_assembly(self, version='sent', threshold=90):
         return super()._load_assembly(version='sent', threshold=90)
 
-    # def _get_model_activations(self, candidate, reset_column='sentence_id',
-    #                            copy_columns=['sentence_id']):
-    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    # def _get_model_activations(self, candidate, reset_column='stimulus_id',
+    #                            copy_columns=['stimulus_id']):
+    #     return super()._get_model_activations(candidate, reset_column='stimulus_id',
     #                                           copy_columns=['stimulus_id'])
 
 class Pereira2023audSentPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
-        super(Pereira2023audSentPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
-    def _load_assembly(self, version='sent', threshold=90):
-        return super()._load_assembly(version='sent', threshold=90)
+        super(Pereira2023audSentPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_index',**kwargs) #CK was stimulus_passage_category_id
+    def _load_assembly(self, version='sent', threshold=80):
+        return super()._load_assembly(version='sent', threshold=80) #threshold was 90
 
-    # def _get_model_activations(self, candidate, reset_column='sentence_id',
-    #                            copy_columns=['sentence_id']):
-    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    # def _get_model_activations(self, candidate, reset_column='stimulus_id',
+    #                            copy_columns=['stimulus_id']):
+    #     return super()._get_model_activations(candidate, reset_column='stimulus_id',
     #                                           copy_columns=['stimulus_id'])
+
 
 class Pereira2023audPassPassageSampleRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
@@ -1152,7 +902,7 @@ class Pereira2023audEncoding(_Pereira2023audBenchmark):
         metric = CrossRegressedCorrelation(
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord=pereira_split_coord, stratification_coord=None))
         super(Pereira2023audEncoding, self).__init__(metric=metric, **kwargs)
 
 
@@ -1167,14 +917,14 @@ class Pereira2023audPassPassageEncoding(Pereira2023audEncoding):
 
 class Pereira2023audPassSentenceEncoding(Pereira2023audEncoding):
     def __init__(self, **kwargs):
-        super(Pereira2023audPassSentenceEncoding, self).__init__(reset_column='sentence_id', **kwargs)
+        super(Pereira2023audPassSentenceEncoding, self).__init__(reset_column='stimulus_id', **kwargs)
 
     def _load_assembly(self, version='pass', threshold=90):
         return super()._load_assembly(version='pass', threshold=90)
 
-    def _get_model_activations(self, candidate, reset_column='sentence_id',
-                               copy_columns=['sentence_id']):
-        return super()._get_model_activations(candidate, reset_column='sentence_id',
+    def _get_model_activations(self, candidate, reset_column='stimulus_id',
+                               copy_columns=['stimulus_id']):
+        return super()._get_model_activations(candidate, reset_column='stimulus_id',
                                               copy_columns=['stimulus_id'])
 
 
@@ -1185,9 +935,9 @@ class Pereira2023audSentSentenceEncoding(Pereira2023audEncoding):
     def _load_assembly(self, version='sent', threshold=90):
         return super()._load_assembly(version='sent', threshold=90)
 
-    # def _get_model_activations(self, candidate, reset_column='sentence_id',
-    #                            copy_columns=['sentence_id']):
-    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    # def _get_model_activations(self, candidate, reset_column='stimulus_id',
+    #                            copy_columns=['stimulus_id']):
+    #     return super()._get_model_activations(candidate, reset_column='stimulus_id',
     #                                           copy_columns=['stimulus_id'])
 
 
@@ -1199,300 +949,16 @@ class Pereira2023audSentPassageEncoding(Pereira2023audEncoding):
     def _load_assembly(self, version='sent', threshold=90):
         return super()._load_assembly(version='sent', threshold=90)
 
-    # def _get_model_activations(self, candidate, reset_column='sentence_id',
-    #                            copy_columns=['sentence_id']):
-    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+    # def _get_model_activations(self, candidate, reset_column='stimulus_id',
+    #                            copy_columns=['stimulus_id']):
+    #     return super()._get_model_activations(candidate, reset_column='stimulus_id',
     #                                           copy_columns=['stimulus_id'])
 
-
-class _Fedorenko2016:
-    """
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    def __init__(self, identifier, metric):
-        self._identifier = identifier
-        assembly = LazyLoad(self.load_assembly)
-        self._target_assembly = assembly
-        self._metric = metric
-        self._average_sentence = False
-        self._ceiler = ExtrapolationCeiling(subject_column='subject_UID')
-        self._electrode_ceiler = self.ElectrodeExtrapolation(subject_column='subject_UID')
-
-    @property
-    def identifier(self):
-        return self._identifier
-
-    def load_assembly(self):
-        raise NotImplementedError()
-
-    def __call__(self, candidate):
-        _logger.info('Computing activations')
-        stimulus_set = self._target_assembly.attrs['stimulus_set']
-        model_activations = read_words(candidate, stimulus_set,
-                                       average_sentence=self._average_sentence, copy_columns=['stimulus_id'])
-        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
-        score = self.apply_metric(model_activations, self._target_assembly)
-        score = self.ceiling_normalize(score)
-        return score
-
-    def apply_metric(self, model_activations, target_assembly):
-        return self._metric(model_activations, target_assembly)
-
-    def ceiling_normalize(self, score):
-        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), score.raw)
-        score = ceil_neuroids(raw_neuroids, self.ceiling, subject_column='subject_UID')
-        return score
-
-    @property
-    def ceiling(self):
-        return self._ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
-
-    @property
-    def electrode_ceiling(self):
-        return self._electrode_ceiler(identifier=self.identifier, assembly=self._target_assembly, metric=self._metric)
-
-    class ElectrodeExtrapolation(ExtrapolationCeiling):
-        """ extrapolate to infinitely many electrodes """
-
-        def __init__(self, *args, **kwargs):
-            super(_Fedorenko2016.ElectrodeExtrapolation, self).__init__(*args, **kwargs)
-            self._rng = RandomState(0)
-            self._num_samples = 15  # number of samples per electrode selection
-
-        def collect(self, identifier, assembly, metric):
-            """ Instead of iterating over subject combinations and then afterwards over holdout subjects,
-            we here iterate over holdout subjects and then over electrode sub-combinations of the remaining pool. """
-            subjects = set(assembly[self.subject_column].values)
-            scores = []
-            for holdout_subject in tqdm(subjects, desc='subjects'):
-                subject_pool = subjects - {holdout_subject}
-                subject_pool_assembly = assembly[{'neuroid': [subject in subject_pool
-                                                              for subject in assembly[self.subject_column].values]}]
-                holdout_subject_assembly = assembly[{'neuroid': [subject == holdout_subject
-                                                                 for subject in assembly[self.subject_column].values]}]
-
-                electrodes = subject_pool_assembly['neuroid_id'].values
-                electrodes_range = np.arange(5, len(electrodes), 5)
-                for num_electrodes in tqdm(electrodes_range, desc='num electrodes'):
-                    electrodes_combinations = self._choose_electrodes(electrodes, num_electrodes,
-                                                                      num_choices=self._num_samples)
-                    for electrodes_split, electrodes_selection in enumerate(electrodes_combinations):
-                        electrodes_assembly = subject_pool_assembly[{'neuroid': [
-                            neuroid_id in electrodes_selection
-                            for neuroid_id in subject_pool_assembly['neuroid_id'].values]}]
-                        score = metric(electrodes_assembly, holdout_subject_assembly)
-                        # store scores
-                        score = score.expand_dims(f"sub_{self.subject_column}")
-                        score.__setitem__(f"sub_{self.subject_column}", [holdout_subject])
-                        score = score.expand_dims('num_electrodes').expand_dims('electrodes_split')
-                        score['num_electrodes'] = [num_electrodes]
-                        score['electrodes_split'] = [electrodes_split]
-                        scores.append(score)
-
-            scores = Score.merge(*scores)
-            ceilings = scores.raw
-            ceilings = ceilings.rename({'split': 'subsplit'}).stack(split=['electrodes_split', 'subsplit'])
-            ceilings.attrs['raw'] = scores
-            return ceilings
-
-        def _choose_electrodes(self, electrodes, num_electrodes, num_choices):
-            choices = [self._rng.choice(electrodes, size=num_electrodes, replace=False) for _ in range(num_choices)]
-            return choices
-
-class Fedorenko2016Encoding(_Fedorenko2016):
-    """
-    Fedorenko benchmark with encoding metric
-
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    def __init__(self, identifier):
-        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
-        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))
-        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
-                                                                       stratification_coord='sentence_id'))
-        super(Fedorenko2016Encoding, self).__init__(identifier=identifier, metric=metric)
-
-class Fedorenko2016V3Encoding(Fedorenko2016Encoding):
-    """
-    Fedorenko benchmark, language electrodes
-
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    @load_s3(key='Fedorenko2016v3')
-    def load_assembly(self):
-        return LazyLoad(lambda: load_Fedorenko2016(electrodes='language', version=3))
-
-    @property
-    @load_s3(key='Fedorenko2016v3-encoding-ceiling')
-    def ceiling(self):
-        return super(Fedorenko2016V3Encoding, self).ceiling
-
-class Fedorenko2016V3NonLangEncoding(Fedorenko2016Encoding):
-    """
-    Fedorenko benchmark, non-language electrodes (only sorted based on signal)
-    Data 03/24/2020: sentence_electrode_more_elec_max_window_dat (not demeaned across sentences)
-
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    @load_s3(key='Fedorenko2016v3nonlang')
-    def load_assembly(self):
-        return LazyLoad(lambda: load_Fedorenko2016(electrodes='non-language', version=3))
-
-    @property
-    @load_s3(key='Fedorenko2016v3nonlang-encoding-ceiling')
-    def ceiling(self):
-        return super(Fedorenko2016V3NonLangEncoding, self).ceiling
-
-class _Fedorenko2016V3SubjectWise(_Fedorenko2016):
-    """
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    def __init__(self, identifier, metric):
-        super(_Fedorenko2016V3SubjectWise, self).__init__(identifier=identifier, metric=metric)
-        self._ceiler.extrapolation_dimension = 'subject_UID'
-        self._cross = CartesianProduct(dividers=['subject_UID'])
-
-    @load_s3(key='Fedorenko2016v3')
-    def load_assembly(self):
-        return LazyLoad(lambda: load_Fedorenko2016(electrodes='language', version=3))
-
-    def apply_metric(self, source_assembly, target_assembly):
-        cross_scores = self._cross(target_assembly, apply=
-        lambda cross_assembly: super(_Fedorenko2016V3SubjectWise, self).apply_metric(source_assembly, cross_assembly))
-        score = cross_scores.median(['subject_UID'])
-        score.attrs['raw'] = cross_scores
-        return score
-
-    def ceiling_normalize(self, score):
-        score = aggregate_ceiling(score.raw, ceiling=self.ceiling, subject_column='subject_UID')
-        return score
-
-class Fedorenko2016V3RDM(_Fedorenko2016V3SubjectWise):
-    """
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    def __init__(self, identifier):
-        metric = RDMCrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord='sentence_id',
-                                        # doesn't work because train_size is deemed too small.
-                                        # even though `train` is not needed, CrossValidation still splits it that way
-                                        splits=5, kfold=True, test_size=None))
-        super(Fedorenko2016V3RDM, self).__init__(identifier=identifier, metric=metric)
-
-    # @property
-    # @load_s3(key='Fedorenko2016v3-rdm-ceiling')
-    # def ceiling(self):
-    #     return super(Fedorenko2016V3RDM, self).ceiling
-
-class Fedorenko2016V3CKA(_Fedorenko2016V3SubjectWise):
-    """
-    data source:
-        Fedorenko et al., PNAS 2016
-        https://www.pnas.org/content/113/41/E6256
-    """
-
-    def __init__(self, identifier):
-        metric = CKACrossValidated(
-            comparison_coord='stimulus_id',
-            crossvalidation_kwargs=dict(split_coord='stimulus_id', stratification_coord='sentence_id',
-                                        # doesn't work because train_size is deemed too small.
-                                        # even though `train` is not needed, CrossValidation still splits it that way
-                                        splits=5, kfold=True, test_size=None))
-        super(Fedorenko2016V3CKA, self).__init__(identifier=identifier, metric=metric)
-
-
-def aggregate(score, combine_layers=True):
-    if hasattr(score, 'experiment') and score['experiment'].ndim > 0:
-        score = score.mean('experiment')
-    if hasattr(score, 'atlas') and score['atlas'].ndim > 0:
-        score = score.mean('atlas')
-    if hasattr(score, 'layer') and score['layer'].ndim > 0 and combine_layers:
-        score_core = score.sel(aggregation='center') if hasattr(score, 'aggregation') else score
-        max_score = score_core.max()
-        max_score = score[{'layer': (score_core == max_score).values}]
-        if len(max_score['layer']) > 1:  # multiple layers achieved exactly the same score
-            layer_index = max_score['layer'].values[0].tolist().index(max_score['layer'].values[0])  # choose first one
-            max_score = max_score.isel(layer=[layer_index])
-        max_score = max_score.squeeze('layer', drop=True)
-        max_score.attrs['raw'] = score.copy()
-        score = max_score
-    return score
-
-
-def ceil_neuroids(raw_neuroids, ceiling, subject_column='subject'):
-    ceiled_neuroids = consistency_neuroids(raw_neuroids, ceiling.raw)
-    ceiled_neuroids.attrs['raw'] = raw_neuroids
-    ceiled_neuroids.attrs['ceiling'] = ceiling.raw
-    score = aggregate_neuroid_scores(ceiled_neuroids, subject_column)
-    score.attrs['ceiling'] = ceiling
-    score.attrs['description'] = "per-neuroid ceiling-normalized score"
-    return score
-
-
-def aggregate_neuroid_scores(neuroid_scores, subject_column):
-    subject_scores = neuroid_scores.groupby(subject_column).median()
-    center = subject_scores.median(subject_column)
-    subject_values = np.nan_to_num(subject_scores.values, nan=0)  # mad cannot deal with all-nan in one axis, treat as 0
-    subject_axis = subject_scores.dims.index(subject_scores[subject_column].dims[0])
-    error = median_absolute_deviation(subject_values, axis=subject_axis)
-    score = Score([center, error], coords={'aggregation': ['center', 'error']}, dims=['aggregation'])
-    score.attrs['raw'] = neuroid_scores
-    score.attrs['description'] = "score aggregated by taking median of neuroids per subject, " \
-                                 "then median of subject scores"
-    return score
-
-
-def consistency_neuroids(neuroids, ceiling_neuroids):
-    if 'neuroid_id' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid_id'].values) == set(ceiling_neuroids['neuroid_id'].values)
-    elif 'neuroid' in ceiling_neuroids.dims:
-        assert set(neuroids['neuroid'].values) == set(ceiling_neuroids['neuroid'].values)
-    ceiling_neuroids = ceiling_neuroids[{'neuroid': [neuroids['neuroid_id'].values.tolist().index(neuroid_id)
-                                                     for neuroid_id in neuroids['neuroid_id'].values]}]  # align
-    ceiling_neuroids = ceiling_neuroids.sel(aggregation='center')
-    values = consistency(neuroids.values, ceiling_neuroids.values)
-    neuroids = type(neuroids)(values, coords={coord: (dims, values) for coord, dims, values in walk_coords(neuroids)},
-                              dims=neuroids.dims)
-    return neuroids
-
-
-def aggregate_ceiling(neuroid_scores, ceiling, subject_column='subject'):
-    aggregate_raw = aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
-    score = consistency(aggregate_raw, ceiling.sel(aggregation='center'))
-    score.attrs['raw'] = aggregate_raw
-    score.attrs['ceiling'] = ceiling
-    score.attrs['description'] = "ceiling-normalized score"
-    return score
-
-
-def consistency(score, ceiling):
-    return score / ceiling
 
 
 benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
-    ('Pereira2018-RDM', PereiraRDM),
     ('Pereira2018-max-encoding', PereiraSamplerMaxEncoding),
     ('Pereira2018-max-V2-encoding', PereiraSamplerMaxV2Encoding),
     ('Pereira2018-min-V2-encoding', PereiraSamplerMinV2Encoding),
@@ -1510,26 +976,9 @@ benchmark_pool = [
     ('Pereira2023aud-sent-sentence-Encoding', Pereira2023audSentSentenceEncoding),
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
-
-
     ('Pereira2018-min-encoding', PereiraSamplerMinEncoding),
-    ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding),
-    ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
-    ('Blank2014fROI-encoding', Blank2014fROIEncoding),
-    #('MghMockLang-encoding', MghMockLangEncoding),
-    # secondary benchmarks
-    ('Pereira2018-rdm', PereiraRDM),
-    ('Pereira2018-cka', PereiraCKA),
-    ('Fedorenko2016v3-rdm', Fedorenko2016V3RDM),
-    ('Fedorenko2016v3-cka', Fedorenko2016V3CKA),
-    ('Fedorenko2016v3nonlang-encoding', Fedorenko2016V3NonLangEncoding),
-    ('Blank2014fROI-rdm', Blank2014fROIRDM),
-    ('Blank2014fROI-cka', Blank2014fROICKA),
+    ('Pereira2018-rand-encoding', PereiraSamplerRandEncoding)
 ]
-for sentence_num in range(1, 10, 2):
-    benchmark_pool.append((f'Blank2014sentence{sentence_num}fROI-encoding',
-                           lambda *args, sentence_num=sentence_num, **kwargs:
-                           Blank2014SentencefROIEncoding(*args, sentence_num=sentence_num, **kwargs)))
 
 benchmark_pool = {identifier: LazyLoad(lambda identifier=identifier, ctr=ctr: ctr(identifier=identifier))
                   for identifier, ctr in benchmark_pool}
