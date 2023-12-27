@@ -23,12 +23,12 @@ if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name="Pereira2023aud-sent-sentence-RidgeEncoding"
     #benchmark_name="Pereira2018-RDM"
-    benchmark_name="DsParametricRDM-max-encoding"
+    #benchmark_name="DsParametricRDM-max-encoding"
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name="LangLocECoG-sentence-encoding"
     #benchmark_name = 'wikitext-2'
     #benchmark_name = "Blank2014fROI-encoding"
-    #benchmark_name = "ANNSet1ECoG-encoding"
+    benchmark_name = "ANNSet1ECoG-encoding"
     #benchmark_name ="Fedorenko2016v3-encoding"
     #benchmark_name = 'LangLocECoGv2-encoding'
     #model_name="gpt2"

@@ -3102,9 +3102,6 @@ benchmark_pool = [
     ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
     ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
     ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
-    ('DsParametricRDM-max-encoding', DsParametricRDMMax),
-    ('DsParametricRDM-rand-encoding', DsParametricRDMRand),
-    ('DsParametricRDM-min-encoding', DsParametricRDMMin),
 
     ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxV1RidgeEncoding),
     ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinV1RidgeEncoding),
