@@ -17,7 +17,7 @@ requirements = [
     "gensim",
     "theano",
     "pytest",
-    "brain-score @ git+https://github.com/brain-score/brain-score.git",
+    #"brain-score @ git+https://github.com/brain-score/brain-score.git",
     "result_caching @ git+https://github.com/brain-score/result_caching",
     "netCDF4",
     "pillow",
