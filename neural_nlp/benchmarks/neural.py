@@ -2740,6 +2740,20 @@ class ANNSet1ECoGV2Encoding(_ANNSet1ECoGV2Benchmark):
     @property
     def ceiling(self):
         return super(ANNSet1ECoGEncoding, self).ceiling
+class ANNSet1ECoGRidgeEncoding(_ANNSet1ECoGV2Benchmark):
+    def __init__(self,identifier):
+        regression = rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')) # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
+                                                                       stratification_coord='sentence_id'))
+
+        super(ANNSet1ECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.01)
+
+    @property
+    def ceiling(self):
+        return super(ANNSet1ECoGEncoding, self).ceiling
+
 
 class _LanglocECOG:
     """
@@ -2933,6 +2947,22 @@ class LangLocECoGV2Encoding(_LanglocECOG):
             return super(_LanglocECOG, self).ceiling_estimate
 
 
+class LangLocECoGRidgeEncoding(_LanglocECOG):
+    def __init__(self, identifier, **kwargs):
+        regression = rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                                                       split_coord='stimuli_id',
+                                                                       stratification_coord='stimulus_id'))
+        super(LangLocECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
+                                                    version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
+
+    def ceiling(self):
+        return super(_LanglocECOG, self).ceiling
+
+    def ceiling_estimate(self):
+        return super(_LanglocECOG, self).ceiling_estimate
 class LangLocECoGSampleEncoding(_LanglocECOG):
     def __init__(self, identifier, **kwargs):
         regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
@@ -3131,8 +3161,10 @@ benchmark_pool = [
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
     ('ANNSet1ECoG-v2-encoding', ANNSet1ECoGV2Encoding),
+    ('ANNSet1ECoG-bip-gamma-RidgeEncoding', ANNSet1ECoGRidgeEncoding),
     ('ANNSet1ECoG-Sentence-encoding', ANNSetECoGSentenceEncoding),
     ('LangLocECoG-encoding', LangLocECoGEncoding),
+    ('LangLocECoG-bip-gamma-RidgeEncoding', LangLocECoGRidgeEncoding),
     ('LangLocECoG-sentence-encoding', LangLocECoGSentenceEncoding),
     ('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
     ('LangLocECoGSample-encoding', LangLocECoGSampleEncoding),
