@@ -2752,7 +2752,7 @@ class ANNSet1ECoGRidgeEncoding(_ANNSet1ECoGV2Benchmark):
 
     @property
     def ceiling(self):
-        return super(ANNSet1ECoGEncoding, self).ceiling
+        return super(ANNSet1ECoGRidgeEncoding, self).ceiling
 
 
 class _LanglocECOG:
@@ -2814,14 +2814,13 @@ class _LanglocECOG:
         assembly = assembly_raw[{'presentation': assembly_raw['stim_type'] == 'S'}]
         # make sure stim_id is sorted
         # rename stim_id as stimulus_id in assembly
-        assembly = assembly.rename({'stim_id': 'stimulus_id'})
+        assembly = assembly.rename({'stim_id': 'sentence_id'})
         # this is to make sure that the assembly is ordered based on stimulus_id
         # and that the word_ids are in increasing order
-        assembly = assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        assembly = assembly.groupby('sentence_id').apply(lambda x: x.sortby('word_id'))
         # define a new coordinate called sentence_id with the same values as stimulus_id
-        assembly = assembly.assign_coords(sentence_id=assembly.stimulus_id)
         # define a new coordiante stimuli_id that goes from 0 to size presentation dimension
-        assembly = assembly.assign_coords({'stimuli_id': ('presentation', np.arange(assembly.stimulus_id.size))})
+        assembly = assembly.assign_coords({'stimulus_id': ('presentation', np.arange(assembly.sentence_id.size))})
         # select electrdoes that are are s_v_n_ratio and are in electrode_valid
         if type=='language':
             s_v_n=assembly.s_v_n_ratio>=(1-threshold)
@@ -2845,61 +2844,42 @@ class _LanglocECOG:
         # make a neural assembly from xarray assembly
         
         assembly = NeuroidAssembly(assembly_new)
-        
-        # add identifier to assembly
-        
+        sentenceID=assembly.sentence_id.values
+        word_number=assembly.stimulus_id.values
+        word_id= assembly.word_id.values
+        sentence_words=assembly.string.values
+
+        zipped_lst = list(zip(sentenceID, word_number, sentence_words,word_id))
+        df_stimulus_set = StimulusSet(zipped_lst, columns=['sentence_id', 'stimulus_id', 'word','word_id'])
+        df_stimulus_set.name = 'LangLoc_ECoG'
+        # construct stimulus set for the assmebly
+
+
+        assembly.attrs['stimulus_set'] = df_stimulus_set
+
         thr_str=str(threshold).replace('.','')
         assembly.attrs['identifier'] = f"LangLoc_ECoG.{version}_{type}_thr_{thr_str}"
         
         return assembly
 
-    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
-        """
-        Pass a `stimulus_set` through a model `candidate`.
-        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
-        """
-        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
-        activations = []
-        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
-            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
-            # stimulus_ids = part_stimuli['stimulus_id']
-            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
-                                            reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{self._target_assembly.identifier}-{reset_id}"
-            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
-            for column in copy_columns:
-                sentence_activations[column] = ('presentation', part_stimuli[column])
-
-            activations.append(sentence_activations)
-
-        # model_activations = merge_data_arrays(activations)
-        model_activations = xr.concat(activations, dim='presentation')
-        # merging does not maintain stimulus order. the following orders again
-        # assert that the order of model_activations is the same as stimulus_set
-        assert np.all(model_activations[reset_column].values == stimulus_set[reset_column].values)
-        # idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
-        #       [int(s[reset_column].values) for s in activations]]
-        # assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-        # model_activations = model_activations[{'presentation': idx}]
-
-        return model_activations
 
     def apply_metric(self, model_activations, target_assembly):
         return self._metric(model_activations, target_assembly)
 
     def __call__(self, candidate, *args, **kwargs):
-        stimulus_set = self._target_assembly['stimulus']
-        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['stimuli_id', 'word_id'])
-        # make sure word_ids are in increasing order and the same between target_assembly and model_activations
-        model_activations = model_activations.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
-        target_assembly = self._target_assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
-        # make sure the model_activations and target_assembly have the same number of words
-        assert np.all(model_activations['word_id'].values == target_assembly['word_id'].values)
-        assert np.all(model_activations['stimuli_id'].values == target_assembly['stimuli_id'].values)
+        _logger.info('Computing activations')
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        model_activations = read_words(candidate, stimulus_set,
+                                       average_sentence=self._average_sentence, copy_columns=['stimulus_id','word_id'])
 
+        #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['stimuli_id', 'word_id'])
+        # make sure word_ids are in increasing order and the same between target_assembly and model_activations
+        # assert model_activation
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        # make sure the model_activations and target_assembly have the same number of words
         _logger.info('Scoring across electrodes')
         score = self.apply_metric(model_activations, self._target_assembly)
-        score = self.ceiling_normalize(score)
+        #score = self.ceiling_normalize(score)
         return score
 
     def _apply_cross(self, source_assembly, cross_assembly):
@@ -2931,12 +2911,12 @@ class LangLocECoGEncoding(_LanglocECOG):
 
 class LangLocECoGV2Encoding(_LanglocECOG):
         def __init__(self,identifier,**kwargs):
-            regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
-            correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+            regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+            correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
             metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
                                                crossvalidation_kwargs=dict(splits=5, kfold=True,
-                                                                           split_coord='stimuli_id',
-                                                                           stratification_coord='stimulus_id'))
+                                                                           split_coord='stimulus_id',
+                                                                           stratification_coord='sentence_id'))
             super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                       version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
 
@@ -2949,20 +2929,20 @@ class LangLocECoGV2Encoding(_LanglocECOG):
 
 class LangLocECoGRidgeEncoding(_LanglocECOG):
     def __init__(self, identifier, **kwargs):
-        regression = rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
-        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
+        regression = rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
                                            crossvalidation_kwargs=dict(splits=5, kfold=True,
-                                                                       split_coord='stimuli_id',
-                                                                       stratification_coord='stimulus_id'))
+                                                                       split_coord='stimulus_id',
+                                                                       stratification_coord='sentence_id'))
         super(LangLocECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                     version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
 
     def ceiling(self):
-        return super(_LanglocECOG, self).ceiling
+        return super(LangLocECoGRidgeEncoding, self).ceiling
 
     def ceiling_estimate(self):
-        return super(_LanglocECOG, self).ceiling_estimate
+        return super(LangLocECoGRidgeEncoding, self).ceiling_estimate
 class LangLocECoGSampleEncoding(_LanglocECOG):
     def __init__(self, identifier, **kwargs):
         regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
