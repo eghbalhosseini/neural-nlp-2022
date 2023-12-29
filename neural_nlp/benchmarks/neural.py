@@ -2670,44 +2670,13 @@ class _ANNSet1ECoGV2Benchmark:
         stimulus_set = StimulusSet({'sentence_id': assembly['sentence_id'].values,
                                     'stimulus_id': assembly['stimulus_id'].values,
                                     'word': assembly['string'].values,
-                                    'word_id': assembly['word_id'].values,
-                                    'sentence': assembly['stimulus'].values})
+                                    'word_id': assembly['word_id'].values})
+                                    #'sentence': assembly['stimulus'].values})
         # attach stimulus set as an attribute to the assembly
         # add name to stimulus set
         stimulus_set.name = f"{np.unique(assembly.experiment.values)[0]}"
         assembly.attrs['stimulus_set'] = stimulus_set
         return assembly
-
-    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
-        """
-        Pass a `stimulus_set` through a model `candidate`.
-        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
-        """
-        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
-        activations = []
-        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
-            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
-            # stimulus_ids = part_stimuli['stimulus_id']
-            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
-                                            reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{self._target_assembly.identifier}-{reset_id}"
-            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
-            for column in copy_columns:
-                sentence_activations[column] = ('presentation', part_stimuli[column])
-
-            activations.append(sentence_activations)
-
-        # model_activations = merge_data_arrays(activations)
-        model_activations = xr.concat(activations, dim='presentation')
-        # merging does not maintain stimulus order. the following orders again
-        # assert that the order of model_activations is the same as stimulus_set
-        assert np.all(model_activations[reset_column].values == stimulus_set[reset_column].values)
-        # idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
-        #       [int(s[reset_column].values) for s in activations]]
-        # assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-        # model_activations = model_activations[{'presentation': idx}]
-
-        return model_activations
 
     def __call__(self, candidate, *args, **kwargs):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
@@ -2754,6 +2723,35 @@ class ANNSet1ECoGRidgeEncoding(_ANNSet1ECoGV2Benchmark):
     def ceiling(self):
         return super(ANNSet1ECoGRidgeEncoding, self).ceiling
 
+class ANNSet1ECoGLinearEncoding(_ANNSet1ECoGV2Benchmark):
+    def __init__(self,identifier):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')) # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
+                                                                       stratification_coord='sentence_id'))
+
+        super(ANNSet1ECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.01)
+
+    #@property
+    def ceiling(self):
+        return super(ANNSet1ECoGLinearEncoding, self).ceiling
+
+class ANNSet1ECoGBipGaussEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_gauss',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss',type='language',threshold=0.01)
+
+class ANNSet1ECoGBipBandEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass',type='language',threshold=0.01)
+
+class ANNSet1ECoGUniGaussEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_gauss',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss',type='language',threshold=0.01)
+
+class ANNSet1ECoGUniBandEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass',type='language',threshold=0.01)
 
 class _LanglocECOG:
     """
@@ -2862,7 +2860,6 @@ class _LanglocECOG:
         
         return assembly
 
-
     def apply_metric(self, model_activations, target_assembly):
         return self._metric(model_activations, target_assembly)
 
@@ -2936,13 +2933,48 @@ class LangLocECoGRidgeEncoding(_LanglocECOG):
                                                                        split_coord='stimulus_id',
                                                                        stratification_coord='sentence_id'))
         super(LangLocECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
-                                                    version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
+                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.01)
 
     def ceiling(self):
         return super(LangLocECoGRidgeEncoding, self).ceiling
 
     def ceiling_estimate(self):
         return super(LangLocECoGRidgeEncoding, self).ceiling_estimate
+
+class LangLocECoGLinearEncoding(_LanglocECOG):
+    def __init__(self, identifier, **kwargs):
+        regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
+        correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
+        metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
+                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                                                       split_coord='stimulus_id',
+                                                                       stratification_coord='sentence_id'))
+        super(LangLocECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
+                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.01)
+
+    def ceiling(self):
+        return super(LangLocECoGLinearEncoding, self).ceiling
+
+    def ceiling_estimate(self):
+        return super(LangLocECoGLinearEncoding, self).ceiling_estimate
+
+class LangLocECoGBipGaussEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_17',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_17',type='language',threshold=0.01)
+
+class LangLocECoGUniGaussEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_17',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_17',type='language',threshold=0.01)
+
+class LangLocECoGBipBandEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_17',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_17',type='language',threshold=0.01)
+
+class LangLocECoGUniBandEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_17',type='language',threshold=0.01):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_17',type='language',threshold=0.01)
+
+
 class LangLocECoGSampleEncoding(_LanglocECOG):
     def __init__(self, identifier, **kwargs):
         regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
@@ -3141,12 +3173,20 @@ benchmark_pool = [
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
     ('ANNSet1ECoG-v2-encoding', ANNSet1ECoGV2Encoding),
-    ('ANNSet1ECoG-bip-gamma-RidgeEncoding', ANNSet1ECoGRidgeEncoding),
     ('ANNSet1ECoG-Sentence-encoding', ANNSetECoGSentenceEncoding),
+    ('ANNSet1ECoG-bip-gaus-Encoding', ANNSet1ECoGBipGaussEncoding),
+    ('ANNSet1ECoG-bip-band-Encoding', ANNSet1ECoGBipBandEncoding),
+    ('ANNSet1ECoG-uni-gaus-Encoding', ANNSet1ECoGUniGaussEncoding),
+    ('ANNSet1ECoG-uni-band-Encoding', ANNSet1ECoGUniBandEncoding),
+
     ('LangLocECoG-encoding', LangLocECoGEncoding),
-    ('LangLocECoG-bip-gamma-RidgeEncoding', LangLocECoGRidgeEncoding),
+    ('LangLocECoG-bip-gaus-Encoding', LangLocECoGBipGaussEncoding),
+    ('LangLocECoG-uni-gaus-Encoding', LangLocECoGUniGaussEncoding),
+    ('LangLocECoG-bip-band-Encoding', LangLocECoGBipBandEncoding),
+    ('LangLocECoG-uni-band-Encoding', LangLocECoGUniBandEncoding),
+
     ('LangLocECoG-sentence-encoding', LangLocECoGSentenceEncoding),
-    ('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
+    #('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
     ('LangLocECoGSample-encoding', LangLocECoGSampleEncoding),
     ('Fedorenko2016v3-encoding', Fedorenko2016V3Encoding),
     ('Blank2014fROI-encoding', Blank2014fROIEncoding),
@@ -3164,6 +3204,18 @@ for sentence_num in range(1, 10, 2):
     benchmark_pool.append((f'Blank2014sentence{sentence_num}fROI-encoding',
                            lambda *args, sentence_num=sentence_num, **kwargs:
                            Blank2014SentencefROIEncoding(*args, sentence_num=sentence_num, **kwargs)))
+
+# signal_type=[('bip-gauss','HighGamma_bipolar_gauss_subs_17'),
+#             ('bip-band','HighGamma_bipolar_bandpass_subs_17'),
+#             ('uni-gaus','HighGamma_unipolar_gauss_subs_17'),
+#             ('uni-band','HighGamma_unipolar_bandpass_subs_17')]
+
+# for name,file in signal_type:
+#     benchmark_pool.append((f'LangLocECoG-{name}-Encoding',
+#                            lambda *args, version=file, **kwargs:
+#                            LangLocECoGLinearEncoding(*args, version=file,threshold=0.01, **kwargs)))
+
+
 
 benchmark_pool = {identifier: LazyLoad(lambda identifier=identifier, ctr=ctr: ctr(identifier=identifier))
                   for identifier, ctr in benchmark_pool}
