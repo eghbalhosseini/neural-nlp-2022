@@ -1,4 +1,7 @@
-from collections import OrderedDict, Callable
+#from collections import OrderedDict, Callable
+from collections import OrderedDict
+from typing import Callable
+
 
 from .core import ActivationsExtractorHelper
 
