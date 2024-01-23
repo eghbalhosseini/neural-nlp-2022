@@ -7,6 +7,7 @@ from collections import defaultdict
 import itertools
 import logging
 import numpy as np
+import xarray as xr
 from brainio.assemblies import DataAssembly, walk_coords, merge_data_arrays, array_is_element
 from numpy.random.mtrand import RandomState
 from scipy.stats import median_abs_deviation as median_absolute_deviation
@@ -54,14 +55,14 @@ def rgcv_linear_pearsonr(*args, regression_kwargs=None, correlation_kwargs=None,
             **kwargs)
 
 if getpass.getuser() == 'eghbalhosseini':
-    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
+    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
     PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
-    DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
 
 elif getpass.getuser() == 'ehoseini':
-    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
-    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
+    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
+    ANNECOG_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
     DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
@@ -2441,7 +2442,7 @@ class _ANNSet1ECoGBenchmark:
         return self._metric(model_activations, target_assembly)
     
     def _load_assembly(self,version='HighGamma_unipolar_gauss_zscore',type='language',threshold=0.05):
-        file_id = Path(ANNfMRI_PARENT, f'ANNSet1_ECoG.train.{version}.pkl')
+        file_id = Path(ANNfMRI_PARENT, f'ANNSet1_ECoG.{version}.pkl')
         assembly = pd.read_pickle(file_id.__str__())
         # make sure the assembly is ordered based on stimulus_id
         assembly = assembly.sortby('stimulus_id')
@@ -2635,26 +2636,28 @@ class _ANNSet1ECoGV2Benchmark:
         return self._metric(model_activations, target_assembly)
 
     def _load_assembly(self, version='HighGamma_unipolar_gauss_zscore', type='language', threshold=0.05):
-        file_id = Path(ANNfMRI_PARENT, f'ANNSet1_ECoG.train.{version}.pkl')
+        file_id = Path(ANNfMRI_PARENT, f'ANNSet1_ECoG.{version}.pkl')
         assembly = pd.read_pickle(file_id.__str__())
-        # make sure the assembly is ordered based on stimulus_id
-        assembly = assembly.sortby('stimulus_id')
+
+        assembly = assembly.rename({'stim_id': 'sentence_id'})
         # this is to make sure that the assembly is ordered based on stimulus_id
         # and that the word_ids are in increasing order
-        assembly = assembly.groupby('stimulus_id').apply(lambda x: x.sortby('word_id'))
+        assembly = assembly.groupby('sentence_id').apply(lambda x: x.sortby('word_id'))
         # define a new coordinate called sentence_id with the same values as stimulus_id
-        assembly = assembly.assign_coords(sentence_id=assembly.stimulus_id)
-        # remove stimulus_id as a coordinate
-        assembly = assembly.reset_index('stimulus_id', drop=True)
         # define a new coordiante stimuli_id that goes from 0 to size presentation dimension
-        assembly = assembly.assign_coords({'stimulus_id': ('presentation', np.arange(assembly.word_id.size))})
+        assembly = assembly.assign_coords({'stimulus_id': ('presentation', np.arange(assembly.sentence_id.size))})
+        # make sure the assembly is ordered based on stimulus_id
+        assembly = assembly.sortby('stimulus_id')
 
+        # this is to make sure that the assembly is ordered based on stimulus_id
         if type == 'language':
-            s_v_n = assembly.S_vs_N_ratio >= (1 - threshold)
+            s_v_n = assembly.s_v_n_ratio >= (1 - threshold)
         elif type == 'non-language':
-            s_v_n = assembly.S_vs_N_ratio < (1 - threshold)
+            s_v_n = assembly.s_v_n_ratio < (1 - threshold)
 
         assembly = assembly.sel(neuroid=((s_v_n) & (assembly['electrode_valid'] == 1)).values)
+        assembly=assembly.dropna('neuroid')
+
         assembly_new = []
         for grp, sub in assembly.groupby('subject'):
             if sub.neuroid.size < 5:
@@ -2662,6 +2665,7 @@ class _ANNSet1ECoGV2Benchmark:
             else:
                 assembly_new.append(sub)
         assembly_new = xr.concat(assembly_new, dim='neuroid')
+
         assert not np.isnan(assembly_new).any()
         assembly = NeuroidAssembly(assembly_new)
         # add identifier to assembly
@@ -2717,7 +2721,7 @@ class ANNSet1ECoGRidgeEncoding(_ANNSet1ECoGV2Benchmark):
                                            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
                                                                        stratification_coord='sentence_id'))
 
-        super(ANNSet1ECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.01)
+        super(ANNSet1ECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
 
     @property
     def ceiling(self):
@@ -2731,27 +2735,45 @@ class ANNSet1ECoGLinearEncoding(_ANNSet1ECoGV2Benchmark):
                                            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id',
                                                                        stratification_coord='sentence_id'))
 
-        super(ANNSet1ECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.01)
+        super(ANNSet1ECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore',threshold=0.05)
 
     #@property
     def ceiling(self):
         return super(ANNSet1ECoGLinearEncoding, self).ceiling
 
 class ANNSet1ECoGBipGaussEncoding(ANNSet1ECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_bipolar_gauss',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_bipolar_gauss',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_21_only_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_20_only_ANN',type='language',threshold=0.05)
 
 class ANNSet1ECoGBipBandEncoding(ANNSet1ECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_bipolar_bandpass',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_bipolar_bandpass',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_21_only_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_20_only_ANN',type='language',threshold=0.05)
 
 class ANNSet1ECoGUniGaussEncoding(ANNSet1ECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_unipolar_gauss',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_unipolar_gauss',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_21_only_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_20_only_ANN',type='language',threshold=0.05)
 
 class ANNSet1ECoGUniBandEncoding(ANNSet1ECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_unipolar_bandpass',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_unipolar_bandpass',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_21_only_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_20_only_ANN',type='language',threshold=0.05)
+
+# do a version for subjects shared with langloc
+class ANNSet1ECoGBipGaussSharedLanglocEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class ANNSet1ECoGBipBandSharedLanglocEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class ANNSet1ECoGUniGaussSharedLanglocEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class ANNSet1ECoGUniBandSharedLanglocEncoding(ANNSet1ECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
 
 class _LanglocECOG:
     """
@@ -2834,9 +2856,11 @@ class _LanglocECOG:
                 assembly_new.append(sub)
         
         assembly_new=xr.concat(assembly_new, dim='neuroid')
+
         # check if there is nan in assembly_new
         assert not np.isnan(assembly_new).any()
-    
+        # do a zscore on the assembly along neuroid
+        #assembly_new = (assembly_new - assembly_new.mean(dim='presentation')) / assembly_new.std(dim='presentation')
         # count number of electrodes with s_v_n_ratio > 0.99
         # print(f"Number of electrodes with s_v_n_ratio > 0.99: {np.sum(assembly['s_v_n_ratio'] > 0.99)}")
         # make a neural assembly from xarray assembly
@@ -2873,6 +2897,8 @@ class _LanglocECOG:
         # make sure word_ids are in increasing order and the same between target_assembly and model_activations
         # assert model_activation
         assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        # zscore model_activations along presentation
+        #model_activations = (model_activations - model_activations.mean(dim='presentation')) / model_activations.std('presentation')
         # make sure the model_activations and target_assembly have the same number of words
         _logger.info('Scoring across electrodes')
         score = self.apply_metric(model_activations, self._target_assembly)
@@ -2894,7 +2920,7 @@ class LangLocECoGEncoding(_LanglocECOG):
         regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimuli_id'))  # word
         correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                           crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimuli_id',
+                                           crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimuli_id',
                                                                        stratification_coord='stimulus_id'))
 
         super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore_subs_17',threshold=0.05)
@@ -2911,11 +2937,11 @@ class LangLocECoGV2Encoding(_LanglocECOG):
             regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
             correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
             metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                               crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                               crossvalidation_kwargs=dict(splits=10, kfold=True,
                                                                            split_coord='stimulus_id',
                                                                            stratification_coord='sentence_id'))
             super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
-                                                      version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.01)
+                                                      version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.05)
 
         def ceiling(self):
             return super(_LanglocECOG, self).ceiling
@@ -2929,11 +2955,11 @@ class LangLocECoGRidgeEncoding(_LanglocECOG):
         regression = rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
         correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                           crossvalidation_kwargs=dict(splits=10, kfold=True,
                                                                        split_coord='stimulus_id',
                                                                        stratification_coord='sentence_id'))
         super(LangLocECoGRidgeEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
-                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.01)
+                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.05)
 
     def ceiling(self):
         return super(LangLocECoGRidgeEncoding, self).ceiling
@@ -2946,11 +2972,11 @@ class LangLocECoGLinearEncoding(_LanglocECOG):
         regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
         correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                           crossvalidation_kwargs=dict(splits=5, kfold=True,
+                                           crossvalidation_kwargs=dict(splits=10, kfold=True,
                                                                        split_coord='stimulus_id',
                                                                        stratification_coord='sentence_id'))
         super(LangLocECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
-                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.01)
+                                                    version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.05)
 
     def ceiling(self):
         return super(LangLocECoGLinearEncoding, self).ceiling
@@ -2959,20 +2985,45 @@ class LangLocECoGLinearEncoding(_LanglocECOG):
         return super(LangLocECoGLinearEncoding, self).ceiling_estimate
 
 class LangLocECoGBipGaussEncoding(LangLocECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_17',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_17',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_28_only_LangLoc',type='language',threshold=0.05)
 
 class LangLocECoGUniGaussEncoding(LangLocECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_17',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_17',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_28_only_LangLoc',type='language',threshold=0.05)
+
+class LangLocECoGBipGaussZSEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_zscore_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_zscore_subs_28_only_LangLoc',type='language',threshold=0.05)
+
+class LangLocECoGUniGaussZSEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_zscore_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_zscore_subs_28_only_LangLoc',type='language',threshold=0.05)
 
 class LangLocECoGBipBandEncoding(LangLocECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_17',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_17',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_28_only_LangLoc',type='language',threshold=0.05)
 
 class LangLocECoGUniBandEncoding(LangLocECoGLinearEncoding):
-    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_17',type='language',threshold=0.01):
-        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_17',type='language',threshold=0.01)
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_28_only_LangLoc',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_28_only_LangLoc',type='language',threshold=0.05)
+
+
+class LangLocECoGBipGaussSharedANNEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class LangLocECoGUniGaussSharedANNEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_gauss_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class LangLocECoGBipBandSharedANNEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_bipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_bipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
+
+class LangLocECoGUniBandSharedANNEncoding(LangLocECoGLinearEncoding):
+    def _load_assembly(self,version='HighGamma_unipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05):
+        return super()._load_assembly(version='HighGamma_unipolar_bandpass_subs_16_shared_LangLoc_ANN',type='language',threshold=0.05)
 
 
 class LangLocECoGSampleEncoding(_LanglocECOG):
@@ -3179,11 +3230,23 @@ benchmark_pool = [
     ('ANNSet1ECoG-uni-gaus-Encoding', ANNSet1ECoGUniGaussEncoding),
     ('ANNSet1ECoG-uni-band-Encoding', ANNSet1ECoGUniBandEncoding),
 
+    ('ANNSet1ECoG-bip-gaus-shared-LangLoc-Encoding', ANNSet1ECoGBipGaussSharedLanglocEncoding),
+    ('ANNSet1ECoG-bip-band-shared-LangLoc-Encoding', ANNSet1ECoGBipBandSharedLanglocEncoding),
+    ('ANNSet1ECoG-uni-gaus-shared-LangLoc-Encoding', ANNSet1ECoGUniGaussSharedLanglocEncoding),
+    ('ANNSet1ECoG-uni-band-shared-LangLoc-Encoding', ANNSet1ECoGUniBandSharedLanglocEncoding),
+
     ('LangLocECoG-encoding', LangLocECoGEncoding),
     ('LangLocECoG-bip-gaus-Encoding', LangLocECoGBipGaussEncoding),
     ('LangLocECoG-uni-gaus-Encoding', LangLocECoGUniGaussEncoding),
+    ('LangLocECoG-bip-gaus-zs-Encoding', LangLocECoGBipGaussZSEncoding),
+    ('LangLocECoG-uni-gaus-zs-Encoding', LangLocECoGUniGaussZSEncoding),
     ('LangLocECoG-bip-band-Encoding', LangLocECoGBipBandEncoding),
     ('LangLocECoG-uni-band-Encoding', LangLocECoGUniBandEncoding),
+
+    ('LangLocECoG-bip-gaus-shared-ANN-Encoding', LangLocECoGBipGaussSharedANNEncoding),
+    ('LangLocECoG-uni-gaus-shared-ANN-Encoding', LangLocECoGUniGaussSharedANNEncoding),
+    ('LangLocECoG-bip-band-shared-ANN-Encoding', LangLocECoGBipBandSharedANNEncoding),
+    ('LangLocECoG-uni-band-shared-ANN-Encoding', LangLocECoGUniBandSharedANNEncoding),
 
     ('LangLocECoG-sentence-encoding', LangLocECoGSentenceEncoding),
     #('LangLocECoGv2-encoding', LangLocECoGV2Encoding),
@@ -3213,7 +3276,7 @@ for sentence_num in range(1, 10, 2):
 # for name,file in signal_type:
 #     benchmark_pool.append((f'LangLocECoG-{name}-Encoding',
 #                            lambda *args, version=file, **kwargs:
-#                            LangLocECoGLinearEncoding(*args, version=file,threshold=0.01, **kwargs)))
+#                            LangLocECoGLinearEncoding(*args, version=file,threshold=0.05, **kwargs)))
 
 
 

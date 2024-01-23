@@ -7,14 +7,19 @@ from numpy import AxisError
 from numpy.random.mtrand import RandomState
 from scipy.optimize import curve_fit
 from tqdm import tqdm, trange
-
+import xarray as xr
 from brainscore.metrics import Score
 from brainscore.metrics.transformations import apply_aggregate
 from result_caching import store
-
-
+from scipy.special import comb
+from collections import defaultdict
+import warnings
 def v(x, v0, tau0):
     return v0 * (1 - np.exp(-x / tau0))
+
+def v_overflow(x,v0,tau0):
+    with np.errstate(over='ignore'):
+        return v0 * (1 - np.exp(-x / tau0))
 
 
 class HoldoutSubjectCeiling:
@@ -52,9 +57,18 @@ class HoldoutSubjectCeiling:
                     raise e
 
         scores = Score.merge(*scores)
-        error = scores.sel(aggregation='center').std(self.subject_column)
+        center_row = (scores.aggregation=='center').values
+        # select only the center row
+        error = scores.isel(aggregation=center_row).std(self.subject_column)
+        #error = scores.sel(aggregation='center').std(self.subject_column)
         scores = apply_aggregate(lambda scores: scores.mean(self.subject_column), scores)
-        scores.loc[{'aggregation': 'error'}] = error
+        # find error location in aggegation dim
+
+        center=scores.isel(aggregation=center_row)
+        scores[:]=np.concatenate([center.values,error.values])
+        # replace the error_row with the error
+
+        #scores.loc[{'aggregation': 'error'}] = error
         return scores
 
     def get_subject_iterations(self, subjects):
@@ -267,16 +281,17 @@ class NoOverlapException(Exception):
 
 
 class FewSubjectExtrapolation:
-    def __init__(self, subject_column,extrapolation_dimension,num_bootstraps,post_process, *args, **kwargs):
+    def __init__(self, subject_column,extrapolation_dimension,post_process,num_subsamples=200,num_bootstraps=100, *args, **kwargs):
         super(FewSubjectExtrapolation, self).__init__(*args, **kwargs)
         self._rng = RandomState(0)
-        self._num_subsamples = 200   # number of subsamples per subject selection
+        self._num_subsamples = num_subsamples   # number of subsamples per subject selection ( this is used to reduce the computational cost)
         #self.holdout_ceiling = HoldoutSubjectCeiling(subject_column=subject_column)
         self._logger = logging.getLogger(fullname(self))
         self.subject_column = subject_column
         self.extrapolation_dimension = extrapolation_dimension
         self.num_bootstraps = num_bootstraps
         self._post_process = post_process
+        self.epsilon=1e-10
 
     @store(identifier_ignore=['assembly', 'metric'])
     def __call__(self, identifier, assembly, metric):
@@ -290,6 +305,7 @@ class FewSubjectExtrapolation:
         scores = []
         scores_raw=[]
         for num_subjects in tqdm(subject_subsamples, desc='num subjects'):
+            # select a set of subjects combination upto _num_subsamples , for example 200 subject combination for 10 subjects,
             selection_combinations = self.iterate_subsets(assembly, num_subjects=num_subjects)
             comb_scores=[]
             for selections, sub_assembly in tqdm(selection_combinations, desc='selections'):
@@ -297,7 +313,6 @@ class FewSubjectExtrapolation:
                 iterate_subjects = np.unique(sub_assembly[self.subject_column].values)
                 for subject in tqdm(iterate_subjects, desc='subjects',disable=True):
                     # select subject data from sub_assembly
-                    True
                     subject_assembly = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] == subject).values)
                     # select data from other subjects
                     other_subject_data = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] != subject).values)
@@ -367,7 +382,7 @@ class FewSubjectExtrapolation:
         #
         # scores = Score.merge(*scores)
         # scores = self.post_process(scores)
-        # return scores
+        return scores
 
     def build_subject_subsamples(self, subjects):
         return tuple(range(2, len(subjects) + 1, 1))  # reduce computational cost by only using every other point
@@ -397,10 +412,15 @@ class FewSubjectExtrapolation:
             for bootstrap in range(self.num_bootstraps):
                 bootstrapped_scores = []
                 for num_subjects in subject_subsamples:
-                    num_scores = neuroid_ceiling.sel(subsample=num_subjects)
+                    num_subject_row = (neuroid_ceiling.subsample == num_subjects).values
+                    # select only the center row
+                    num_scores = neuroid_ceiling.isel(subsample=num_subject_row)
+                    #num_scores = neuroid_ceiling.sel(subsample=num_subjects)
                     choices = num_scores.values.flatten()
                     bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
-                    bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        bootstrapped_scores.append(np.nanmean(bootstrapped_score))
                     #bootstrapped_score = rng.choice(choices, size=10, replace=True)
                     #bootstrapped_scores.append(np.nanmean(bootstrapped_score))
 
@@ -411,13 +431,21 @@ class FewSubjectExtrapolation:
                 y = np.array(bootstrapped_scores)[valid]
                 x= np.array(subject_subsamples)[valid]
                 try:
-                    params = self.fit(x, y)
+                    params,R_squared = self.fit(x, y)
+                    # if R_squared is negative or less than self.epsilon, then the fit is not good so replace it with nan
+                    # if R_squared<self.epsilon:
+                    #     params=[np.nan,np.nan]
                 except:
                     params = [np.nan, np.nan]
                 params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
                                       dims=['bootstrap', 'param'])
+                params.attrs['R_squared']=R_squared
                 bootstrap_params.append(params)
+            # get R_squared values
+            R_squared_values = np.array([x.attrs['R_squared'] for x in bootstrap_params])
             bootstrap_params = merge_data_arrays(bootstrap_params)
+            # add it back to bootstrap_params
+            bootstrap_params.attrs['R_squared']=R_squared_values
             if not np.isnan(bootstrap_params.values).all():
                 ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
                                if not np.isnan(params).any()])
@@ -436,8 +464,9 @@ class FewSubjectExtrapolation:
                 ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
             ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
             neuroid_ceilings.append(ceiling_estimate)
-        neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
 
+
+        neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
         neuroid_ceilings.attrs['raw'] = ceilings
         return neuroid_ceilings
     #
@@ -447,7 +476,9 @@ class FewSubjectExtrapolation:
         # would lead to >1 trillion initial samples.
         subjects = np.array(list(subjects))
         combinations = set()
-        while len(combinations) < choice:
+        # find the maximum number of combinations possible
+        max_choice = comb(len(subjects), num_subjects)
+        while len(combinations) < min(choice,max_choice):
             elements = rng.choice(subjects, size=num_subjects, replace=False)
             combinations.add(tuple(elements))
         return combinations
@@ -522,11 +553,24 @@ class FewSubjectExtrapolation:
             score.attrs['endpoint_x'] = DataAssembly(np.asarray(np.nan))
         return score
 
-    def fit(self, subject_subsamples, bootstrapped_scores):
-        valid = ~np.isnan(bootstrapped_scores)
+    def fit(self, x, y):
+        x_data= np.array(x)
+        y_data=np.array(y)
+        valid = ~np.isnan(y)
+        x_data=x_data[valid]
+        y_data=y_data[valid]
+        tau_bound=(0.5,int(max(x_data)*10)) # here for tau=0.5 the model already close to the ceiling for x=2, so we set the lower bound to 0.5
+        #tau_bound=(1,np.inf)
         if sum(valid) < 1:
             raise RuntimeError("No valid scores in sample")
-        params, pcov = curve_fit(v, subject_subsamples, bootstrapped_scores,
-                                 # v (i.e. max ceiling) is between 0 and 1, tau0 unconstrained
-                                 bounds=([0, -np.inf], [1, np.inf]))
-        return params
+        params, pcov = curve_fit(v_overflow, x_data, y_data,check_finite=True,
+                                 # v (i.e. max ceiling) is between 0 and 1, tau0
+                                 bounds=([0, -np.inf], tau_bound),nan_policy='omit')
+
+        y_pred = v(x_data, *params)
+        residuals = y_data - y_pred
+        SS_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        SS_res = np.sum(residuals ** 2)
+        # Calculate R-squared
+        R_squared = 1 - (SS_res / SS_tot)
+        return params, R_squared
