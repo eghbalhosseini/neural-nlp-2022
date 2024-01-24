@@ -2979,7 +2979,7 @@ class LangLocECoGEncoding(_LanglocECOG):
         correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimuli_id'))  # word
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
                                            crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimuli_id',
-                                                                       stratification_coord='stimulus_id',show_tqdm=False))
+                                                                       stratification_coord='stimulus_id'))
 
         super(LangLocECoGEncoding, self).__init__(identifier=identifier, metric=metric,type='language',version='HighGamma_bipolar_gauss_zscore_subs_17',threshold=0.05)
 
@@ -3033,7 +3033,7 @@ class LangLocECoGLinearEncoding(_LanglocECOG):
         metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
                                            crossvalidation_kwargs=dict(splits=10, kfold=True,
                                                                        split_coord='stimulus_id',
-                                                                       stratification_coord='sentence_id',show_tqdm=False))
+                                                                       stratification_coord='sentence_id'))
         super(LangLocECoGLinearEncoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                     version='HighGamma_bipolar_gamma_zscore_subs_17', threshold=0.05)
 
