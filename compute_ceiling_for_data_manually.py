@@ -12,7 +12,7 @@ from brainscore.metrics.regression import linear_regression, pearsonr_correlatio
 
 if __name__ =='__main__':
 
-    benchmark_name = "LangLocECoG-uni-gaus-Encoding"
+    benchmark_name = "ANNSet1ECoG-bip-gaus-shared-LangLoc-Encoding"
 
     benchmark=benchmark_pool[benchmark_name]
     bench_metric=benchmark._metric

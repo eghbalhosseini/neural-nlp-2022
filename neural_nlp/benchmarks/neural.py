@@ -2652,10 +2652,10 @@ class _ANNSet1ECoGV2Benchmark:
         assembly = assembly.rename({'stim_id': 'sentence_id'})
         # drop Trial_onset and Trial_abs_onset
         # delete these because they messe up regression
-        assembly = assembly.drop(['Trial_id'], axis=1)
-        assembly = assembly.drop(['Trial_abs_id'], axis=1)
-        assembly = assembly.drop(['Trial_onset'], axis=1)
-        assembly = assembly.drop(['Trial_abs_onset'], axis=1)
+        #assembly = assembly.drop(['Trial_id'], axis=1)
+        #assembly = assembly.drop(['Trial_abs_id'], axis=1)
+        #assembly = assembly.drop(['Trial_onset'], axis=1)
+        #assembly = assembly.drop(['Trial_abs_onset'], axis=1)
         assembly = assembly.sortby(['sentence_id'])
         assembly = assembly.groupby('sentence_id').apply(lambda x: x.sortby('word_id'))
         # make sure there are only S in stim_type
