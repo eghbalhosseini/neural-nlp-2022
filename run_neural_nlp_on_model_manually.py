@@ -24,7 +24,7 @@ elif user=='ehoseini':
 if __name__ =='__main__':
     benchmark_name = "LangLocECoG-uni-gaus-Encoding"
 
-    model_name = "gpt2-medium"
+    model_name = "gpt2"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name

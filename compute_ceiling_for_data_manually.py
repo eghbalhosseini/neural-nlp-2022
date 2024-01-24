@@ -13,10 +13,10 @@ if __name__ =='__main__':
     benchmark_name = "LangLocECoG-uni-gaus-Encoding"
 
     benchmark=benchmark_pool[benchmark_name]
-    benchmark._metric
-    benchmark._target_assembly
+    bench_metric=benchmark._metric
+    bench_metric._show_tqdm=False
     # number of subsamples is how mant of combination (n choose k) we want to sample. for large number of subjects this can be very large
     benchmark._ceiler=FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',post_process=None,num_subsamples=10,num_bootstraps=10)
-    ceiling=benchmark._ceiler(benchmark.identifier,assembly=benchmark._target_assembly,metric=benchmark._metric)
+    ceiling=benchmark._ceiler(benchmark.identifier,assembly=benchmark._target_assembly,metric=bench_metric)
     # print ceiling
 
