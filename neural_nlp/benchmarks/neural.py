@@ -2994,10 +2994,11 @@ class LangLocECoGV2Encoding(_LanglocECOG):
         def __init__(self,identifier,**kwargs):
             regression = linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id'))  # word
             correlation = pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id'))  # word
+            split_coord='stimulus_id'
+            stratification_coord='sentence_id'
+            crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord=split_coord,stratification_coord=stratification_coord)
             metric = CrossRegressedCorrelation(regression=regression, correlation=correlation,
-                                               crossvalidation_kwargs=dict(splits=10, kfold=True,
-                                                                           split_coord='stimulus_id',
-                                                                           stratification_coord='sentence_id',show_tqdm=True))
+                                               crossvalidation_kwargs=crossvalidation_kwargs)
             super(LangLocECoGV2Encoding, self).__init__(identifier=identifier, metric=metric, type='language',
                                                       version='HighGamma_bipolar_gauss_zscore_subs_17', threshold=0.05)
 

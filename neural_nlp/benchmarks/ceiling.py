@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 from tqdm import tqdm, trange
 import xarray as xr
 from brainscore.metrics import Score
+from brainscore.metrics.transformations import Transformation, Split, enumerate_done, subset
 from brainscore.metrics.transformations import apply_aggregate
 from result_caching import store
 from scipy.special import comb
@@ -20,6 +21,60 @@ def v(x, v0, tau0):
 def v_overflow(x,v0,tau0):
     with np.errstate(over='ignore'):
         return v0 * (1 - np.exp(-x / tau0))
+
+# ceiling crossvalidation, same as crossvalidation with the difference that tqdm is supperessed
+class CeilingCrossValidation(Transformation):
+    """
+    Performs multiple splits over a source and target assembly.
+    No guarantees are given for data-alignment, use the metadata.
+    """
+
+    def __init__(self, *args, split_coord=Split.Defaults.split_coord,
+                 stratification_coord=Split.Defaults.stratification_coord,
+                 preprocess_indices=None, show_tqdm=False, **kwargs):
+        self._split_coord = split_coord
+        self._stratification_coord = stratification_coord
+        self._split = Split(*args, split_coord=split_coord, stratification_coord=stratification_coord, **kwargs)
+        self._logger = logging.getLogger(fullname(self))
+        self._show_tqdm = show_tqdm
+        self._preprocess_indices = preprocess_indices
+
+    def pipe(self, source_assembly, target_assembly):
+        # check only for equal values, alignment is given by metadata
+        assert sorted(source_assembly[self._split_coord].values) == sorted(target_assembly[self._split_coord].values)
+        if self._split.do_stratify:
+            assert hasattr(source_assembly, self._stratification_coord)
+            assert sorted(source_assembly[self._stratification_coord].values) == \
+                   sorted(target_assembly[self._stratification_coord].values)
+        cross_validation_values, splits = self._split.build_splits(target_assembly)
+
+        split_scores = []
+        for split_iterator, (train_indices, test_indices), done \
+                in tqdm(enumerate_done(splits), total=len(splits), desc='cross-validation',
+                        disable=not self._show_tqdm):
+
+            if hasattr(self, '_preprocess_indices'):
+                if self._preprocess_indices is not None:
+                    train_indices, test_indices = self._preprocess_indices(train_indices, test_indices, source_assembly)
+
+            train_values, test_values = cross_validation_values[train_indices], cross_validation_values[test_indices]
+            train_source = subset(source_assembly, train_values, dims_must_match=False)
+            train_target = subset(target_assembly, train_values, dims_must_match=False)
+            assert len(train_source[self._split_coord]) == len(train_target[self._split_coord])
+            test_source = subset(source_assembly, test_values, dims_must_match=False)
+            test_target = subset(target_assembly, test_values, dims_must_match=False)
+            assert len(test_source[self._split_coord]) == len(test_target[self._split_coord])
+            split_score = yield from self._get_result(train_source, train_target, test_source, test_target,
+                                                      done=done)
+            split_score = split_score.expand_dims('split')
+            split_score['split'] = [split_iterator]
+            split_scores.append(split_score)
+
+        split_scores = Score.merge(*split_scores)
+        yield split_scores
+
+    def aggregate(self, score):
+        return self._split.aggregate(score)
 
 
 class HoldoutSubjectCeiling:
