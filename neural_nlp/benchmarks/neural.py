@@ -913,8 +913,11 @@ class _ANNSet1fMRIBenchmark(Benchmark):
     def _load_assembly(self,version):
         if version=='base':
             assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+
         elif version=='wordForm':
             assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
+
+        # save a.sentence and b.sentence  as csv file with 2 columns a.sentence, b.sentence
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
         if vox_reliability['language'][0]:
@@ -1016,7 +1019,6 @@ class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
     """
     data source:
     """
-
     def __init__(self, **kwargs):
 
         metric = CrossRegressedCorrelation(
@@ -1026,52 +1028,52 @@ class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
 
         super(ANNSet1fMRIEncoding_V2, self).__init__(metric=metric,version='wordForm', **kwargs)
 
-        def _load_assembly(self):
-            # read UD data and replace stimuli
-            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
-            UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
-            sentence_texts=[]
-            for stim_id,stim in UD_data.groupby('stimulus_id'):
-                sentence_texts.append(np.unique(stim.text.values)[0])
-            sentence_index=[sentence_texts.index(x) for x in assembly.stimulus.values]
-            assert(len(sentence_index)==200)
-            selected_stim=[]
-            for sent_id in sentence_index:
-                location=(UD_data.stimulus_id==sent_id).values
-                selected_stim.append(UD_data.sel(index=location))
-
-            assert all([np.unique(x.text)[0]==assembly.stimulus.values[idx] for idx, x in enumerate(selected_stim)])
-            stimulus_form=[' '.join(x.word_FORM.values) for x in selected_stim]
-
-            new_assembly = NeuroidAssembly(assembly.values, coords={
-                'experiment': ('presentation', assembly.experiment.values),
-                'stimulus_num': ('presentation', assembly.stimulus_num.values),
-                'stimulus_id': ('presentation', assembly.stimulus_id.values),
-                'sentence': ('presentation', stimulus_form),
-                'stimulus': ('presentation', stimulus_form),
-                'list_id': ('presentation', assembly.list_id.values),
-                'stim_type': ('presentation', assembly.stim_type.values),
-                'stim_name': ('presentation', assembly.stim_name.values),
-                'Trial_id': ('presentation', assembly.Trial_id.values),
-                'TR_onset': ('presentation', assembly.TR_onset.values),
-                'TR_recorded': ('presentation', assembly.TR_recorded.values),
-                'TR_duration': ('presentation', assembly.TR_duration.values),
-                'subject': ('neuroid', assembly.subject.values),
-                'neuroid_id': ('neuroid', assembly.neuroid_id.values),
-                'voxel_num': ('neuroid', assembly.voxel_num.values),
-                'repetition_corr_ratio': ('neuroid', assembly.repetition_corr_ratio.values),
-                'repetition_corr': ('neuroid', assembly.repetition_corr.values),
-                'roi': ('neuroid', assembly.roi.values),
-                'atlas': ('neuroid',assembly.atlas.values)
-            }, dims=['presentation', 'neuroid'])
-            new_assembly = new_assembly.sortby('stimulus_id')
-
-            new_assembly.attrs['identifier']=assembly.identifier+'_wordForm'
-            name=new_assembly.identifier.replace('.','-')
-            with open(Path(f'{ANNfMRI_PARENT}/{name}.pkl').__str__(),'wb') as f:
-                pickle.dump(new_assembly,f)
-
-            return new_assembly
+    # def _load_assembly(self):
+    #     # read UD data and replace stimuli
+    #     assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+    #     UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
+    #     sentence_texts=[]
+    #     for stim_id,stim in UD_data.groupby('stimulus_id'):
+    #         sentence_texts.append(np.unique(stim.text.values)[0])
+    #     sentence_index=[sentence_texts.index(x) for x in assembly.stimulus.values]
+    #     assert(len(sentence_index)==200)
+    #     selected_stim=[]
+    #     for sent_id in sentence_index:
+    #         location=(UD_data.stimulus_id==sent_id).values
+    #         selected_stim.append(UD_data.sel(index=location))
+    #
+    #     assert all([np.unique(x.text)[0]==assembly.stimulus.values[idx] for idx, x in enumerate(selected_stim)])
+    #     stimulus_form=[' '.join(x.word_FORM.values) for x in selected_stim]
+    #
+    #     new_assembly = NeuroidAssembly(assembly.values, coords={
+    #         'experiment': ('presentation', assembly.experiment.values),
+    #         'stimulus_num': ('presentation', assembly.stimulus_num.values),
+    #         'stimulus_id': ('presentation', assembly.stimulus_id.values),
+    #         'sentence': ('presentation', stimulus_form),
+    #         'stimulus': ('presentation', stimulus_form),
+    #         'list_id': ('presentation', assembly.list_id.values),
+    #         'stim_type': ('presentation', assembly.stim_type.values),
+    #         'stim_name': ('presentation', assembly.stim_name.values),
+    #         'Trial_id': ('presentation', assembly.Trial_id.values),
+    #         'TR_onset': ('presentation', assembly.TR_onset.values),
+    #         'TR_recorded': ('presentation', assembly.TR_recorded.values),
+    #         'TR_duration': ('presentation', assembly.TR_duration.values),
+    #         'subject': ('neuroid', assembly.subject.values),
+    #         'neuroid_id': ('neuroid', assembly.neuroid_id.values),
+    #         'voxel_num': ('neuroid', assembly.voxel_num.values),
+    #         'repetition_corr_ratio': ('neuroid', assembly.repetition_corr_ratio.values),
+    #         'repetition_corr': ('neuroid', assembly.repetition_corr.values),
+    #         'roi': ('neuroid', assembly.roi.values),
+    #         'atlas': ('neuroid',assembly.atlas.values)
+    #     }, dims=['presentation', 'neuroid'])
+    #     new_assembly = new_assembly.sortby('stimulus_id')
+    #
+    #     new_assembly.attrs['identifier']=assembly.identifier+'_wordForm'
+    #     name=new_assembly.identifier.replace('.','-')
+    #     with open(Path(f'{ANNfMRI_PARENT}/{name}.pkl').__str__(),'wb') as f:
+    #         pickle.dump(new_assembly,f)
+    #
+    #     return new_assembly
     @property
     def ceiling(self):
         ceiling_val = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
