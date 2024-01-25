@@ -492,6 +492,7 @@ class FewSubjectExtrapolation:
                     #     params=[np.nan,np.nan]
                 except:
                     params = [np.nan, np.nan]
+                    R_squared=np.nan
                 params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
                                       dims=['bootstrap', 'param'])
                 params.attrs['R_squared']=R_squared
