@@ -12,7 +12,7 @@ from brainscore.metrics import Score
 from brainscore.metrics.transformations import Transformation, Split, enumerate_done, subset
 from brainscore.metrics.transformations import apply_aggregate
 from result_caching import store
-from scipy.special import comb
+from scipy.special import comb, perm
 from collections import defaultdict
 import warnings
 def v(x, v0, tau0):
@@ -529,6 +529,7 @@ class FewSubjectExtrapolation:
         # following https://stackoverflow.com/a/55929159/2225200
         # building all `itertools.combinations` followed by `rng.choice` subsampling
         # would lead to >1 trillion initial samples.
+        # ehoseini: there was a bug in the original code that resulted in subjects being in order, now added a shuffle in the end
         subjects = np.array(list(subjects))
         combinations = set()
         # find the maximum number of combinations possible
@@ -536,6 +537,9 @@ class FewSubjectExtrapolation:
         while len(combinations) < min(choice,max_choice):
             elements = rng.choice(subjects, size=num_subjects, replace=False)
             combinations.add(tuple(elements))
+        # shuffle combinations
+        combinations = list(combinations)
+        rng.shuffle(combinations)
         return combinations
 
     def add_neuroid_meta(self, target, source):

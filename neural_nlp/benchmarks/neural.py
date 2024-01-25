@@ -863,7 +863,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         self._identifier = identifier
         assembly = self._load_assembly(version=version)
         self._target_assembly = assembly
-        self._single_metric = metric
+        self._metric = metric
         # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
 
@@ -899,7 +899,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
 
         return model_activations
 
-    def _metric(self, source_assembly, target_assembly):
+    def apply_metric(self, source_assembly, target_assembly):
         """ for ceiling compute """
         cross_scores = self._cross(target_assembly, apply=
         lambda cross_assembly: self._apply_cross(source_assembly, cross_assembly))
@@ -909,20 +909,45 @@ class _ANNSet1fMRIBenchmark(Benchmark):
     def _average_cross_scores(self, cross_scores):
         return cross_scores.mean(['experiment', 'atlas'])
 
-    # @load_s3(key='Pereira2018')
+
     def _load_assembly(self,version):
         if version=='base':
             assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
         elif version=='wordForm':
             assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI_{version}'
+
+        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stumulus': assembly['stimulus'].values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+
+        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
+        assembly.attrs['stimulus_set'] = stimulus_set
+
         return assembly
-
     def __call__(self, candidate):
-        stimulus_set = self._target_assembly['stimulus']
-
-        stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
-        stimulus_set.word_id
-        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimuls_id')
+        #stimulus_set = self._target_assembly['stimulus']
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        #stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
+        #stimulus_set.word_id
+        #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimuls_id')
+        model_activations = listen_to_v2(candidate, stimulus_set,reset_column='stimulus_id',average_sentence=False)
         assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
 
         _logger.info('Scoring across experiments & atlases')
@@ -930,12 +955,6 @@ class _ANNSet1fMRIBenchmark(Benchmark):
                                    apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
         raw_scores = cross_scores.raw
         raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
-
-        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
-        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
-        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
-        # normalize the neuroid aggregate by the overall ceiling aggregate.
-        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
         language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
         score = self._aggregate_ceiling(language_neuroids, ceiling=self.ceiling, subject_column='subject')
         return score
@@ -947,7 +966,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
-        return self._single_metric(source_assembly, cross_assembly)
+        return self._metric(source_assembly, cross_assembly)
 
     @property
     def ceiling(self):

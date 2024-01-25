@@ -12,10 +12,10 @@ from brainscore.metrics.regression import linear_regression, pearsonr_correlatio
 
 if __name__ =='__main__':
 
-    benchmark_name = "Pereira2023aud-pass-passage-Encoding"
+    benchmark_name = "ANNSet1fMRI-encoding"
 
     benchmark=benchmark_pool[benchmark_name]
-    bench_metric=benchmark._single_metric
+    bench_metric=benchmark._metric
     # number of subsamples is how mant of combination (n choose k) we want to sample. for large number of subjects this can be very large
     bench_regression=bench_metric.regression
     bench_correlation=bench_metric.correlation
