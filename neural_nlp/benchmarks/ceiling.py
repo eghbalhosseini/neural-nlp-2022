@@ -518,8 +518,8 @@ class FewSubjectExtrapolation:
                 ceiling_estimate.attrs['error_high'] = DataAssembly(error_high)
                 ceiling_estimate.attrs['bootstrapped_params'] = bootstrap_params
                 ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
-            ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
-            neuroid_ceilings.append(ceiling_estimate)
+                ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
+                neuroid_ceilings.append(ceiling_estimate)
 
 
         neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
@@ -619,13 +619,15 @@ class FewSubjectExtrapolation:
         valid = ~np.isnan(y)
         x_data=x_data[valid]
         y_data=y_data[valid]
-        tau_bound=(0.5,int(max(x_data)*10)) # here for tau=0.5 the model already close to the ceiling for x=2, so we set the lower bound to 0.5
-        #tau_bound=(1,np.inf)
+        tau_bound=(0.001,int(max(x_data)*10)) # here for tau=0.5 the model already close to the ceiling for x=2, so we set the lower bound to 0.5
+
+
         if sum(valid) < 1:
             raise RuntimeError("No valid scores in sample")
+        # note that bounds are in the format : (lower_bounds,upper_bounds)
         params, pcov = curve_fit(v_overflow, x_data, y_data,check_finite=True,
                                  # v (i.e. max ceiling) is between 0 and 1, tau0
-                                 bounds=([0, -np.inf], tau_bound),nan_policy='omit')
+                                 bounds=([0, tau_bound[0]], [1,tau_bound[1]]),nan_policy='omit')
 
         y_pred = v(x_data, *params)
         residuals = y_data - y_pred
