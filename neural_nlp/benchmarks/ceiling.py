@@ -461,7 +461,13 @@ class FewSubjectExtrapolation:
         interpolation_xs = np.arange(1000)
         for i in trange(len(ceilings[self.extrapolation_dimension]),desc=f'{self.extrapolation_dimension} extrapolations'):
             neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
+            total_subsample=np.unique(ceilings.isel(**{self.extrapolation_dimension: [i]})['subsample'])
+            neuroid_ceiling= neuroid_ceiling.dropna(dim='subsample')
             subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
+            # find the intersection of subject_subsamples and total_subsample
+            leftout_subsamples = np.intersect1d(np.unique(subject_subsamples),total_subsample)
+            assert(len(leftout_subsamples)>len(total_subsample)/2)
+            # make aleast half of the subject_subsamples exist
             rng = RandomState(0)
             bootstrap_params = []
             for bootstrap in range(self.num_bootstraps):
