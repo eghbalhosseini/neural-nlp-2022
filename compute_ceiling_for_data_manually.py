@@ -2,20 +2,14 @@ from neural_nlp.benchmarks import benchmark_pool
 import os
 import pandas as pd
 import getpass
-from neural_nlp.benchmarks.ceiling import (ExtrapolationCeiling,
-                                           HoldoutSubjectCeiling,
-                                           v,ci_error,manual_merge,_coords_match,
-                                           FewSubjectExtrapolation,
+from neural_nlp.benchmarks.ceiling import (FewSubjectExtrapolation,
                                            CeilingCrossValidation)
 import sklearn
-from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
 # find the  the path of RESULT_CACHING directory as a python variable
 
 variable_value = os.environ.get('RESULTCACHING_HOME')
 print(variable_value)
 
-
-import os
 
 # Set environment variable at the beginning of your script
 os.environ["SPLIT_AT_PASSAGE"] = '1'
@@ -38,6 +32,7 @@ if __name__ =='__main__':
     num_split=bench_cross_val._split._split.n_splits
     spliter=bench_cross_val._split._split
     print(f'split coordinate : {split_coord} \n')
+    print(f'spliter type : {type(spliter)} \n')
     if type(spliter)==sklearn.model_selection._split.StratifiedKFold:
             kfold=True
     elif type(spliter)==sklearn.model_selection._split.KFold:

@@ -19,7 +19,16 @@ for ignore_logger in ['transformers.data.processors', 'botocore', 'boto3', 'urll
 
 def run(benchmark, model, layers=None, subsample=None):
     start = datetime.now()
-    score = score_function(model=model, layers=layers, subsample=subsample, benchmark=benchmark)
+    
+    # add to not overwite score files
+    if os.getenv('SPLIT_AT_PASSAGE', '0') == '1':
+        split_coord = "Passage"
+    elif os.getenv('SPLIT_AT_TOPIC', '0') == '1':
+        split_coord = "Topic"
+    else:
+        split_coord = "Sentence"
+        
+    score = score_function(model=model, layers=layers, subsample=subsample, benchmark=benchmark, split_coord=split_coord)
     end = datetime.now()
     print(score)
     print(f"Duration: {end - start}")

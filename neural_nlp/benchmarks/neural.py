@@ -16,8 +16,8 @@ from brainscore.benchmarks import Benchmark
 from brainscore.metrics import Score
 from brainscore.metrics.rdm import RDM, RDMSimilarity, RDMCrossValidated
 from brainscore.metrics.cka import CKACrossValidated
-from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation,XarrayRegression,pls_regression
-from brainscore.metrics.transformations import CartesianProduct, CrossValidation, apply_aggregate
+from brainscore.metrics.regression import linear_regression, pearsonr_correlation, XarrayRegression,pls_regression #CrossRegressedCorrelation,
+from brainscore.metrics.transformations import CartesianProduct, apply_aggregate #CrossValidation, 
 from brainscore.utils import LazyLoad
 from neural_nlp.benchmarks.ceiling import ExtrapolationCeiling, HoldoutSubjectCeiling, v,ci_error,manual_merge,_coords_match, FewSubjectExtrapolation
 from neural_nlp.benchmarks.s3 import load_s3
@@ -39,6 +39,7 @@ from sklearn.linear_model import RidgeCV
 import scipy.stats as stats
 import rsatoolbox.data as rsd
 from neural_nlp.benchmarks.metric.rsa.metric import XarrayRSA, rsa_correlation
+from neural_nlp.benchmarks.new_crossregression import CrossRegressedCorrelation, CrossValidation # for splitting at different values
 import os
 
 
@@ -60,7 +61,7 @@ elif getpass.getuser() == 'ehoseini':
     fMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
 elif getpass.getuser() == 'ckauf':
-    fMRI_PARENT = '/om2/vast/evlab/ckauf/contextualization-nnlp/fmri_DNN/outputs'
+    fMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
 
 _logger = logging.getLogger(__name__)
@@ -654,12 +655,8 @@ class _Pereira2023audBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='sent', threshold=90):
-        try:
-            assembly = pd.read_pickle(f'{fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_CK.pkl')
-            _logger.warning(f'Using the following assembly file: {fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_CK.pkl')
-        except:
-            assembly = pd.read_pickle(f'{fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
-            _logger.warning(f'Using the following assembly file: {fMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{fMRI_PARENT}Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+        _logger.warning(f'Using the following assembly file: {fMRI_PARENT}Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -780,6 +777,7 @@ class Pereira2023audV2RidgeEncoding(_Pereira2023audBenchmark):
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord=pereira_split_coord, stratification_coord=None))
         super(Pereira2023audRidgeEncoding, self).__init__(metric=metric, **kwargs)
+        
     def __call__(self, candidate):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
         _logger.warning(f'extracting activation on {self._reset_column}')
@@ -824,7 +822,7 @@ class Pereira2023audPassPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     def _load_assembly(self,version='pass',threshold=90):
         return super()._load_assembly(version='pass',threshold=90)
     
-   
+    
 class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audPassSentenceRidgeEncoding, self).__init__(reset_column='stimulus_id',**kwargs)
@@ -899,6 +897,7 @@ class Pereira2023audPassPassageSampleRidgeEncoding(Pereira2023audRidgeEncoding):
 
 class Pereira2023audEncoding(_Pereira2023audBenchmark):
     def __init__(self, **kwargs):
+        print(f"Split coordinate being passed to CrossRegressedCorrelation in Pereira2023audEncoding: {pereira_split_coord}")
         metric = CrossRegressedCorrelation(
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
