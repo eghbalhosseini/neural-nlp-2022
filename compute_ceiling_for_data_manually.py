@@ -10,10 +10,8 @@ import sklearn
 variable_value = os.environ.get('RESULTCACHING_HOME')
 print(variable_value)
 
-
-# Set environment variable at the beginning of your script
-os.environ["SPLIT_AT_PASSAGE"] = '1'
 print(os.getenv('SPLIT_AT_PASSAGE'))
+#in run script have SPLIT_AT_PASSAGE=1 "$CONDA_ENV/bin/python" compute_ceiling_for_data_manually.py
 
 if __name__ =='__main__':
 
