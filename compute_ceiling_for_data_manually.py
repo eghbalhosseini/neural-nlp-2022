@@ -1,6 +1,7 @@
 
 from neural_nlp.benchmarks import benchmark_pool
 import os
+import pandas as pd
 import getpass
 from neural_nlp.benchmarks.ceiling import (ExtrapolationCeiling,
                                            HoldoutSubjectCeiling,
@@ -9,12 +10,20 @@ from neural_nlp.benchmarks.ceiling import (ExtrapolationCeiling,
                                            CeilingCrossValidation)
 import sklearn
 from brainscore.metrics.regression import linear_regression, pearsonr_correlation, CrossRegressedCorrelation
+# find the  the path of RESULT_CACHING directory as a python variable
+
+variable_value = os.environ.get('RESULTCACHING_HOME')
+print(variable_value)
+
+
 
 if __name__ =='__main__':
 
-    benchmark_name = "ANNSet1fMRI-encoding"
-
+    benchmark_name = "ANNSet1fMRI-wordForm-encoding"
     benchmark=benchmark_pool[benchmark_name]
+    # load _target_assembly
+    # save_target_assembly as a netcdf file
+    # drop attributes for voxel selection
     bench_metric=benchmark._metric
     # number of subsamples is how mant of combination (n choose k) we want to sample. for large number of subjects this can be very large
     bench_regression=bench_metric.regression
@@ -41,7 +50,10 @@ if __name__ =='__main__':
                                                          splits=num_split,kfold=kfold,show_tqdm=False)
 
 
-    benchmark._ceiler=FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',post_process=None,num_subsamples=10,num_bootstraps=10)
+    benchmark._ceiler=FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',post_process=None,num_subsamples=150,num_bootstraps=200)
     ceiling=benchmark._ceiler(benchmark.identifier,assembly=benchmark._target_assembly,metric=bench_metric)
     # print ceiling
+    print(ceiling)
+
+
 

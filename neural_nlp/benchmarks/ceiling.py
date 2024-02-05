@@ -455,82 +455,101 @@ class FewSubjectExtrapolation:
 
     def extrapolate(self, ceilings):
         neuroid_ceilings = []
+        bootstrap_params, endpoint_xs = [], []
         raw_keys = ['bootstrapped_params', 'error_low', 'error_high', 'endpoint_x']
         raw_attrs = defaultdict(list)
-        asymptote_threshold = .0005
-        interpolation_xs = np.arange(1000)
         for i in trange(len(ceilings[self.extrapolation_dimension]),desc=f'{self.extrapolation_dimension} extrapolations'):
             neuroid_ceiling = ceilings.isel(**{self.extrapolation_dimension: [i]})
-            total_subsample=np.unique(ceilings.isel(**{self.extrapolation_dimension: [i]})['subsample'])
-            neuroid_ceiling= neuroid_ceiling.dropna(dim='subsample')
-            subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
-            # find the intersection of subject_subsamples and total_subsample
-            leftout_subsamples = np.intersect1d(np.unique(subject_subsamples),total_subsample)
-            assert(len(leftout_subsamples)>len(total_subsample)/2)
-            # make aleast half of the subject_subsamples exist
-            rng = RandomState(0)
-            bootstrap_params = []
-            for bootstrap in range(self.num_bootstraps):
-                bootstrapped_scores = []
-                for num_subjects in subject_subsamples:
-                    num_subject_row = (neuroid_ceiling.subsample == num_subjects).values
-                    # select only the center row
-                    num_scores = neuroid_ceiling.isel(subsample=num_subject_row)
-                    #num_scores = neuroid_ceiling.sel(subsample=num_subjects)
-                    choices = num_scores.values.flatten()
-                    bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", category=RuntimeWarning)
-                        bootstrapped_scores.append(np.nanmean(bootstrapped_score))
-                    #bootstrapped_score = rng.choice(choices, size=10, replace=True)
-                    #bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+            extrapolated_ceiling = self.extrapolate_neuroid(neuroid_ceiling.squeeze())
+            extrapolated_ceiling = self.add_neuroid_meta(extrapolated_ceiling, neuroid_ceiling)
+            neuroid_ceilings.append(extrapolated_ceiling)
+            # also keep track of bootstrapped parameters
+            neuroid_bootstrap_params = extrapolated_ceiling.bootstrapped_params
+            neuroid_bootstrap_params = self.add_neuroid_meta(neuroid_bootstrap_params, neuroid_ceiling)
+            bootstrap_params.append(neuroid_bootstrap_params)
+            # and endpoints
+            endpoint_x = self.add_neuroid_meta(extrapolated_ceiling.endpoint_x, neuroid_ceiling)
+            endpoint_xs.append(endpoint_x)
+            # total_subsample=np.unique(ceilings.isel(**{self.extrapolation_dimension: [i]})['subsample'])
+            # neuroid_ceiling= neuroid_ceiling.dropna(dim='subsample')
+            # subject_subsamples = list(sorted(set(neuroid_ceiling['subsample'].values)))
+            # # find the intersection of subject_subsamples and total_subsample
+            # leftout_subsamples = np.intersect1d(np.unique(subject_subsamples),total_subsample)
+            # assert(len(leftout_subsamples)>len(total_subsample)/2)
+            # # make aleast half of the subject_subsamples exist
+            # rng = RandomState(0)
+            # bootstrap_params = []
+            # for bootstrap in range(self.num_bootstraps):
+            #     bootstrapped_scores = []
+            #     for num_subjects in subject_subsamples:
+            #         num_subject_row = (neuroid_ceiling.subsample == num_subjects).values
+            #         # select only the center row
+            #         num_scores = neuroid_ceiling.isel(subsample=num_subject_row)
+            #         #num_scores = neuroid_ceiling.sel(subsample=num_subjects)
+            #         choices = num_scores.values.flatten()
+            #         bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
+            #         with warnings.catch_warnings():
+            #             warnings.simplefilter("ignore", category=RuntimeWarning)
+            #             bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+            #     valid = ~np.isnan(bootstrapped_scores)
+            #     if sum(valid) < 1:
+            #         raise RuntimeError("No valid scores in sample")
+            #     # drop nan
+            #     y = np.array(bootstrapped_scores)[valid]
+            #     x= np.array(subject_subsamples)[valid]
+            #     try:
+            #         params,R_squared = self.fit(x, y)
+            #     except:
+            #         params = [np.nan, np.nan]
+            #         R_squared=np.nan
+            #     params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
+            #                           dims=['bootstrap', 'param'])
+            #     params.attrs['R_squared']=R_squared
+            #     bootstrap_params.append(params)
+            #
+            # # compute error low and high
+            # # get R_squared values
+            # R_squared_values = np.array([x.attrs['R_squared'] for x in bootstrap_params])
+            # bootstrap_params = merge_data_arrays(bootstrap_params)
+            # # add it back to bootstrap_params
+            # bootstrap_params.attrs['R_squared']=R_squared_values
+            # if not np.isnan(bootstrap_params.values).all():
+            #     ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
+            #                    if not np.isnan(params).any()])
+            #     median_ys = np.median(ys, axis=0)
+            #     diffs = np.diff(median_ys)
+            #     end_x = np.where(diffs < asymptote_threshold)[
+            #         0].min()  # first x where increase smaller than threshold
+            #     # put together
+            #     center = np.median(np.array(bootstrap_params)[:, 0])
+            #     error_low, error_high = ci_error(ys[:, end_x], center=center)
+            #     ceiling_estimate = Score(center)
+            #     ceiling_estimate.attrs['raw'] = neuroid_ceiling
+            #     ceiling_estimate.attrs['error_low'] = DataAssembly(error_low)
+            #     ceiling_estimate.attrs['error_high'] = DataAssembly(error_high)
+            #     ceiling_estimate.attrs['bootstrapped_params'] = bootstrap_params
+            #     ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
+            #     ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
+            #     neuroid_ceilings.append(ceiling_estimate)
+            #     neuroid_bootstrap_params = ceiling_estimate.bootstrapped_params
+            #     neuroid_bootstrap_params = self.add_neuroid_meta(neuroid_bootstrap_params, neuroid_ceiling)
+            #     ceiling_bootstrap_params.append(neuroid_bootstrap_params)
+            #     endpoint_x = self.add_neuroid_meta(ceiling_estimate.endpoint_x, neuroid_ceiling)
+            #     endpoint_xs.append(endpoint_x)
 
-                valid = ~np.isnan(bootstrapped_scores)
-                if sum(valid) < 1:
-                    raise RuntimeError("No valid scores in sample")
-                # drop nan
-                y = np.array(bootstrapped_scores)[valid]
-                x= np.array(subject_subsamples)[valid]
-                try:
-                    params,R_squared = self.fit(x, y)
-                    # if R_squared is negative or less than self.epsilon, then the fit is not good so replace it with nan
-                    # if R_squared<self.epsilon:
-                    #     params=[np.nan,np.nan]
-                except:
-                    params = [np.nan, np.nan]
-                    R_squared=np.nan
-                params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
-                                      dims=['bootstrap', 'param'])
-                params.attrs['R_squared']=R_squared
-                bootstrap_params.append(params)
-            # get R_squared values
-            R_squared_values = np.array([x.attrs['R_squared'] for x in bootstrap_params])
-            bootstrap_params = merge_data_arrays(bootstrap_params)
-            # add it back to bootstrap_params
-            bootstrap_params.attrs['R_squared']=R_squared_values
-            if not np.isnan(bootstrap_params.values).all():
-                ys = np.array([v(interpolation_xs, *params) for params in bootstrap_params.values
-                               if not np.isnan(params).any()])
-                median_ys = np.median(ys, axis=0)
-                diffs = np.diff(median_ys)
-                end_x = np.where(diffs < asymptote_threshold)[
-                    0].min()  # first x where increase smaller than threshold
-                # put together
-                center = np.median(np.array(bootstrap_params)[:, 0])
-                error_low, error_high = ci_error(ys[:, end_x], center=center)
-                ceiling_estimate = Score(center)
-                ceiling_estimate.attrs['raw'] = neuroid_ceiling
-                ceiling_estimate.attrs['error_low'] = DataAssembly(error_low)
-                ceiling_estimate.attrs['error_high'] = DataAssembly(error_high)
-                ceiling_estimate.attrs['bootstrapped_params'] = bootstrap_params
-                ceiling_estimate.attrs['endpoint_x'] = DataAssembly(end_x)
-                ceiling_estimate = self.add_neuroid_meta(ceiling_estimate, neuroid_ceiling)
-                neuroid_ceilings.append(ceiling_estimate)
-
+        temp=neuroid_ceilings
 
         neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
         neuroid_ceilings.attrs['raw'] = ceilings
-        return neuroid_ceilings
+
+        bootstrap_params = manual_merge(*bootstrap_params, on=self.extrapolation_dimension)
+        neuroid_ceilings.attrs['bootstrapped_params'] = bootstrap_params
+        self._logger.debug("Merging endpoints")
+        endpoint_xs = manual_merge(*endpoint_xs, on=self.extrapolation_dimension)
+        neuroid_ceilings.attrs['endpoint_x'] = endpoint_xs
+        # aggregate
+        ceiling = self.aggregate_neuroid_ceilings(neuroid_ceilings)
+        return ceiling
     #
     def _random_combinations(self, subjects, num_subjects, choice, rng):
         # following https://stackoverflow.com/a/55929159/2225200
@@ -556,42 +575,50 @@ class FewSubjectExtrapolation:
                 target[coord] = dims, values
         return target
 
-    def aggregate_neuroid_ceilings(self, neuroid_ceilings, raw_keys):
+    def aggregate_neuroid_ceilings(self, neuroid_ceilings):
         ceiling = neuroid_ceilings.median(self.extrapolation_dimension)
+        ceiling.attrs['bootstrapped_params'] = neuroid_ceilings.bootstrapped_params.median(self.extrapolation_dimension)
+        ceiling.attrs['endpoint_x'] = neuroid_ceilings.endpoint_x.median(self.extrapolation_dimension)
         ceiling.attrs['raw'] = neuroid_ceilings
-        for key in raw_keys:
-            values = neuroid_ceilings.attrs[key]
-            aggregate = values.median(self.extrapolation_dimension)
-            if not aggregate.shape:  # scalar value, e.g. for error_low
-                aggregate = aggregate.item()
-            ceiling.attrs[key] = aggregate
         return ceiling
 
     def extrapolate_neuroid(self, ceilings):
         # figure out how many extrapolation x points we have. E.g. for Pereira, not all combinations are possible
-        subject_subsamples = list(sorted(set(ceilings['num_subjects'].values)))
+        #total_subsample=np.unique(ceilings.isel(**{self.extrapolation_dimension: [i]})['subsample'])
+        ceilings = ceilings.dropna(dim='subsample')
+        subject_subsamples = list(sorted(set(ceilings['subsample'].values)))
         rng = RandomState(0)
         bootstrap_params = []
         for bootstrap in range(self.num_bootstraps):
             bootstrapped_scores = []
             for num_subjects in subject_subsamples:
-                num_scores = ceilings.sel(num_subjects=num_subjects)
-                # the sub_subjects dimension creates nans, get rid of those
-                num_scores = num_scores.dropna(f'sub_{self.subject_column}')
-                assert set(num_scores.dims) == {f'sub_{self.subject_column}', 'split'} or \
-                       set(num_scores.dims) == {f'sub_{self.subject_column}'}
-                # choose from subject subsets and the splits therein, with replacement for variance
+                num_subject_row = (ceilings.subsample == num_subjects).values
+                # select only the center row
+                num_scores = ceilings.isel(subsample=num_subject_row)
+                # num_scores = neuroid_ceiling.sel(subsample=num_subjects)
                 choices = num_scores.values.flatten()
                 bootstrapped_score = rng.choice(choices, size=len(choices), replace=True)
-                bootstrapped_scores.append(np.mean(bootstrapped_score))
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    bootstrapped_scores.append(np.nanmean(bootstrapped_score))
+            valid = ~np.isnan(bootstrapped_scores)
+            if sum(valid) < 1:
+                raise RuntimeError("No valid scores in sample")
+            # drop nan
+            y = np.array(bootstrapped_scores)[valid]
+            x = np.array(subject_subsamples)[valid]
             try:
-                params = self.fit(subject_subsamples, bootstrapped_scores)
+                params, R_squared = self.fit(x, y)
             except:
                 params = [np.nan, np.nan]
+                R_squared = np.nan
             params = DataAssembly([params], coords={'bootstrap': [bootstrap], 'param': ['v0', 'tau0']},
                                   dims=['bootstrap', 'param'])
+            params.attrs['R_squared'] = R_squared
             bootstrap_params.append(params)
+        R_squared_values = np.array([x.attrs['R_squared'] for x in bootstrap_params])
         bootstrap_params = merge_data_arrays(bootstrap_params)
+        bootstrap_params.attrs['R_squared'] = R_squared_values
         # find endpoint and error
         asymptote_threshold = .0005
         interpolation_xs = np.arange(1000)
@@ -600,7 +627,8 @@ class FewSubjectExtrapolation:
                            if not np.isnan(params).any()])
             median_ys = np.median(ys, axis=0)
             diffs = np.diff(median_ys)
-            end_x = np.where(diffs < asymptote_threshold)[0].min()  # first x where increase smaller than threshold
+            end_x = np.where(diffs < asymptote_threshold)[
+                0].min()  # first x where increase smaller than threshold
             # put together
             center = np.median(np.array(bootstrap_params)[:, 0])
             error_low, error_high = ci_error(ys[:, end_x], center=center)
