@@ -9,7 +9,7 @@ import logging
 import numpy as np
 from brainio.assemblies import DataAssembly, walk_coords, merge_data_arrays, array_is_element
 from numpy.random.mtrand import RandomState
-from scipy.stats import median_absolute_deviation
+from scipy.stats import median_abs_deviation as median_absolute_deviation
 from tqdm import tqdm, trange
 from neural_nlp.benchmarks.metric.rsa.metric import XarrayRSA
 from brainscore.benchmarks import Benchmark
@@ -48,10 +48,10 @@ import os
 
 
 if getpass.getuser() == 'eghbalhosseini':
-    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
-    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
+    ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
     PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
-    fMRI_PARENT = '/Users/eghbalhosseini/MyData/brain-score-language/dataset/'
+    fMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
 
 elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/brain-score-language/dataset/'
@@ -231,7 +231,7 @@ class _PereiraBenchmark(Benchmark):
         self._identifier = identifier
         self._data_version = data_version
         self._target_assembly = LazyLoad(lambda: self._load_assembly(version=self._data_version))
-        self._single_metric = metric
+        self._metric = metric
         self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
 
@@ -283,7 +283,7 @@ class _PereiraBenchmark(Benchmark):
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
-        return self._single_metric(source_assembly, cross_assembly)
+        return self._metric(source_assembly, cross_assembly)
 
     @property
     def ceiling(self):
@@ -604,7 +604,7 @@ class _Pereira2023audBenchmark(Benchmark):
         self._identifier = identifier
         assembly = self._load_assembly(threshold=threshold, version=version)
         self._target_assembly = assembly
-        self._single_metric = metric
+        self._metric = metric
         self._reset_column = reset_column
         # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
@@ -729,7 +729,7 @@ class _Pereira2023audBenchmark(Benchmark):
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
-        return self._single_metric(source_assembly, cross_assembly)
+        return self._metric(source_assembly, cross_assembly)
 
     @property
     def ceiling(self):
