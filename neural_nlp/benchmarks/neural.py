@@ -583,11 +583,11 @@ class PereiraNormalizedEncoding_V2(PereiraNormalizedEncoding):
 
 #specify split coordinate for cross-validation
 if os.getenv('SPLIT_AT_PASSAGE', '0') == '1':
-    print("THIS SPLITS AT *ORIGINAL* PASSAGE ID")
-    pereira_split_coord = 'old_stimulus_passage_index'
-    print("Change this here if you want to use the new passage id (see benchmark packaging)")
-#     print("THIS SPLITS AT *NEW* PASSAGE ID")
-#     pereira_split_coord = 'stimulus_passage_index'
+#     pereira_split_coord = 'old_stimulus_passage_index'
+#     print(f"THIS SPLITS AT *ORIGINAL* PASSAGE ID, i.e.: {pereira_split_coord}")
+    pereira_split_coord = 'stimulus_passage_index'
+    print(f"THIS SPLITS AT *NEW* PASSAGE ID, i.e.: {pereira_split_coord}")
+    print("Change this here if you want to use the old passage id 'old_stimulus_passage_index' (see benchmark packaging)")
 elif os.getenv('SPLIT_AT_TOPIC', '0') == '1':
     pereira_split_coord = 'stimulus_passage_category'
 else:
