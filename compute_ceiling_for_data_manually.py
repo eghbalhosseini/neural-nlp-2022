@@ -17,7 +17,7 @@ print(os.getenv('SPLIT_AT_PASSAGE'))
 
 if __name__ =='__main__':
 
-    benchmark_name = "Pereira2023aud-pass-passage-Encoding"
+    benchmark_name = "Pereira2018-encoding"
     benchmark=benchmark_pool[benchmark_name]
     # load _target_assembly
     # save_target_assembly as a netcdf file

@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2a3348cf-c617-4d86-8069-61390a64ade1" name="Default Changelist" comment="added new ceiling computation based on main branch">
-      <change afterPath="$PROJECT_DIR$/compute_ceiling_for_data_manually.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/neural_nlp/benchmarks/neural.py" beforeDir="false" afterPath="$PROJECT_DIR$/neural_nlp/benchmarks/neural.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/compute_ceiling_for_data_manually.py" beforeDir="false" afterPath="$PROJECT_DIR$/compute_ceiling_for_data_manually.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -120,6 +119,12 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "settings.editor.selected.configurable": "preferences.lookFeel",
     "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python",
+      "Puppet"
+    ]
   }
 }]]></component>
   <component name="RecentsManager">
@@ -883,13 +888,19 @@
           <option name="timeStamp" value="50" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/compute_ceiling_for_data_manually.py</url>
-          <line>51</line>
-          <option name="timeStamp" value="51" />
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/neural.py</url>
+          <line>319</line>
+          <option name="timeStamp" value="57" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/../brain-score/brainscore/metrics/transformations.py</url>
-          <option name="timeStamp" value="52" />
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/ceiling.py</url>
+          <line>448</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/neural_nlp/benchmarks/ceiling.py</url>
+          <line>566</line>
+          <option name="timeStamp" value="59" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -908,7 +919,7 @@
     <SUITE FILE_PATH="coverage/neural_nlp_2022$neural_nlp_pipeline_debug.coverage" NAME="neural_nlp_pipeline_debug Coverage Results" MODIFIED="1673036605014" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/neural_nlp_2022$run_neural_nlp_behavioral_on_model_manually.coverage" NAME="run_neural_nlp_behavioral_on_model_manually Coverage Results" MODIFIED="1689277629402" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/neural_nlp_2022$test_neural_nlp_pipeline.coverage" NAME="neural_nlp_pipeline_debug Coverage Results" MODIFIED="1647878632677" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/neural_nlp_2022$compute_ceiling_for_data_manually.coverage" NAME="compute_ceiling_for_data_manually Coverage Results" MODIFIED="1707163373790" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/neural_nlp_2022$compute_ceiling_for_data_manually.coverage" NAME="compute_ceiling_for_data_manually Coverage Results" MODIFIED="1707165497763" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/neural_nlp_2022$scratch_3.coverage" NAME="scratch_3 Coverage Results" MODIFIED="1646928710495" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/neural_nlp_2022$run_neural_nlp_on_benchmark_testing.coverage" NAME="run_neural_nlp_on_benchmark_testing Coverage Results" MODIFIED="1692305885918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
