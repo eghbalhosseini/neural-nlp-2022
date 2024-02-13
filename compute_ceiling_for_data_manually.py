@@ -19,7 +19,7 @@ print(variable_value)
 
 if __name__ =='__main__':
 
-    benchmark_name = "ANNSet1fMRI-wordForm-encoding"
+    benchmark_name = "ANNSet1fMRI-encoding"
     benchmark=benchmark_pool[benchmark_name]
     # load _target_assembly
     # save_target_assembly as a netcdf file

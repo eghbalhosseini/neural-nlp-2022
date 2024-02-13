@@ -538,15 +538,15 @@ class FewSubjectExtrapolation:
             #     endpoint_xs.append(endpoint_x)
 
         temp=neuroid_ceilings
-
+        temp1=bootstrap_params
         neuroid_ceilings = manual_merge(*neuroid_ceilings, on=self.extrapolation_dimension)
         neuroid_ceilings.attrs['raw'] = ceilings
-
         bootstrap_params = manual_merge(*bootstrap_params, on=self.extrapolation_dimension)
         neuroid_ceilings.attrs['bootstrapped_params'] = bootstrap_params
         self._logger.debug("Merging endpoints")
         endpoint_xs = manual_merge(*endpoint_xs, on=self.extrapolation_dimension)
         neuroid_ceilings.attrs['endpoint_x'] = endpoint_xs
+        # save the raw attributes
         # aggregate
         ceiling = self.aggregate_neuroid_ceilings(neuroid_ceilings)
         return ceiling

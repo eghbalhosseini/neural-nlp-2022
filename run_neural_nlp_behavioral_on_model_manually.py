@@ -22,7 +22,8 @@ elif user=='ehoseini':
 if __name__ =='__main__':
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name="Pereira2023aud-pass-passage-RidgeEncoding"
-    benchmark_name='Futrell2018-norm-v2-sentence-encoding'
+    #benchmark_name='ANNSet1fMRI-wordForm-encoding'
+    benchmark_name='ANNSet1fMRI-encoding'
     #benchmark_name="Pereira2018-encoding"
     #benchmark_name="LangLocECoG-sentence-encoding"
     #benchmark_name = 'wikitext-2'

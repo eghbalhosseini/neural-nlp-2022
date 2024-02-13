@@ -864,7 +864,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         assembly = self._load_assembly(version=version)
         self._target_assembly = assembly
         self._metric = metric
-        # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
+        self._ceiler = FewSubjectExtrapolation(subject_column='subject',extrapolation_dimension='neuroid',post_process=None,num_subsamples=150,num_bootstraps=200)
         self._cross = CartesianProduct(dividers=['experiment', 'atlas'])
 
     @property
@@ -1012,7 +1012,8 @@ class ANNSet1fMRIEncoding(_ANNSet1fMRIBenchmark):
 
     @property
     def ceiling(self):
-        ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        #ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        ceiling_val=super(ANNSet1fMRIEncoding, self).ceiling
         return ceiling_val
 
 class ANNSet1fMRIEncoding_V2(_ANNSet1fMRIBenchmark):
