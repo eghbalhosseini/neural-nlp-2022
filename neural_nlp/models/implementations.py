@@ -625,6 +625,7 @@ class Transformer(PytorchWrapper, BrainModel, TaskModel):
             numpy_output = PytorchWrapper._tensor_to_numpy(output)
             target_dict[name].append(numpy_output)
 
+
         hook = layer.register_forward_hook(hook_function)
         return hook
 
@@ -832,7 +833,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
         def __init__(self, tokenizer, model, layer_names, tokenizer_special_tokens=()):
             import torch
             self.tokenizer = tokenizer
-            self.model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
+            #self.model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
+            self.model = model
             self.layer_names = layer_names
             self.tokenizer_special_tokens = tokenizer_special_tokens
 
