@@ -14,20 +14,35 @@ from accelerate import init_empty_weights, Accelerator
 from accelerate import load_checkpoint_and_dispatch,infer_auto_device_map
 from transformers import LlamaForCausalLM, LlamaTokenizer,LlamaConfig
 
+
+def get_gpu_memory_size(gpu_name):
+    if "A100" in gpu_name:
+        return "40GiB"
+    elif "RTX A6000" in gpu_name or "A6000" in gpu_name:
+        return "40GiB"
+    else:
+        return "Unknown Size"
+
+max_memory_declaration = {}
 import torch
 if torch.backends.mps.is_available():
     mps_device = torch.device("mps")
-    x = torch.ones(1, device=mps_device)
-    print (x)
 else:
     print ("MPS device not found.")
+    num_devices = torch.cuda.device_count()
+    # Iterate through each CUDA device
+    for i in range(num_devices):
+        gpu_name = torch.cuda.get_device_name(i)
+        max_memory_declaration[i] = get_gpu_memory_size(gpu_name)
+
+    # get the number of available gpus
+    device_count = torch.cuda.device_count()
+    device_type = torch.cuda.get_device_name(0)
 
 
 if __name__ =='__main__':
     benchmark_name = "ANNSet1fMRI-encoding"
-
     modelname = '13B'
-
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
     tokenizer = LlamaTokenizer.from_pretrained(weight_path)
@@ -37,8 +52,8 @@ if __name__ =='__main__':
     with init_empty_weights():
         model = LlamaForCausalLM(modelConfig)
 
-
-    device_map = infer_auto_device_map(model, no_split_module_classes=['LlamaDecoderLayer'],)
+    device_map = infer_auto_device_map(model, no_split_module_classes=['LlamaDecoderLayer'],
+                                       max_memory=max_memory_declaration)
     # print device map
     print(device_map)
     model = load_checkpoint_and_dispatch(model, checkpoint=weight_path, device_map=device_map)
