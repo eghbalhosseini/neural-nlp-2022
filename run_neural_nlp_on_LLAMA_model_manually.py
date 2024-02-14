@@ -8,7 +8,7 @@ if user=='eghbalhosseini':
     LLAMA_path = '/Users/eghbalhosseini/MyData/LLAMA/'
 elif user=='ehoseini':
     model_and_config_dir = '/om2/user/ehoseini/MyData/neural_nlp_bench/'
-    LLAMA_path= '/nese/mit/group/evlab/u/ehoseini/MyData/LLAMA/'
+    LLAMA_path= '/rdma/vast-rdma/vast/evlab/ehoseini/MyData/LLAMA/'
 
 from accelerate import init_empty_weights, Accelerator
 from accelerate import load_checkpoint_and_dispatch,infer_auto_device_map
@@ -17,7 +17,7 @@ from transformers import LlamaForCausalLM, LlamaTokenizer,LlamaConfig
 
 def get_gpu_memory_size(gpu_name):
     if "A100" in gpu_name:
-        return "40GiB"
+        return "70GiB"
     elif "RTX A6000" in gpu_name or "A6000" in gpu_name:
         return "40GiB"
     else:
@@ -42,7 +42,7 @@ else:
 
 if __name__ =='__main__':
     benchmark_name = "ANNSet1fMRI-encoding"
-    modelname = '13B'
+    modelname = '65B'
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
     tokenizer = LlamaTokenizer.from_pretrained(weight_path)
@@ -58,6 +58,8 @@ if __name__ =='__main__':
     print(device_map)
     model = load_checkpoint_and_dispatch(model, checkpoint=weight_path, device_map=device_map)
     layers=('drop',) + tuple(f'encoder.layers.{i}' for i in range(modelConfig.num_hidden_layers))
+    for i in model.named_parameters():
+        print(f"{i[0]} -> {i[1].device}")
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name
