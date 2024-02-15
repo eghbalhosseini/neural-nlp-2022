@@ -523,6 +523,8 @@ def listen_to_v2(candidate, stimulus_set, reset_column='story', average_sentence
     for story in ordered_set(stimulus_set[reset_column].values):
         story_stimuli = stimulus_set[stimulus_set[reset_column] == story]
         story_stimuli.name = f"listen_to_{stimulus_set.name}-{story}"
+        # IMPORTANT: fix so that the full sentence get parsed instead of individual word
+        #story_stimuli.iloc[0,0]=[story_stimuli.iloc[0,0]]
         story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
         if average_sentence==False:
             # picke up the last word of each sentence
@@ -881,10 +883,15 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
             part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
             # stimulus_ids = part_stimuli['stimulus_id']
-            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+            #sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+            #                                reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.sentence,
                                             reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{self._target_assembly.identifier}-{reset_id}"
-            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1, :]
+            sentence_stimuli.name = f"{self._target_assembly.identifier}-read-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+            num_words=len(str(part_stimuli.sentence.values[0]).split(' '))
+            assert(sentence_activations.shape[0]==num_words)
+            sentence_activations=sentence_activations[-1, :]
             # for column in copy_columns:
             #    sentence_activations[column] = ('presentation', part_stimuli[column])
             activations.append(sentence_activations)
@@ -932,12 +939,15 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
         assembly = assembly.sel(neuroid=vox_selection)
         assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI_{version}'
+        # drop the period in the end of sentences if they exist in the end
 
-        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
                                     'stimulus_num': assembly['stimulus_num'].values,
                                     'stimulus_id': assembly['stimulus_id'].values,
                                     'stim_name': assembly['stim_name'].values,
-                                    'stumulus': assembly['stimulus'].values,
+                                    'stumulus': sentences.values,
                                     'sentence_id': assembly['stimulus_id'].values})
 
         stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
@@ -949,8 +959,9 @@ class _ANNSet1fMRIBenchmark(Benchmark):
         stimulus_set = self._target_assembly.attrs['stimulus_set']
         #stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
         #stimulus_set.word_id
-        #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimuls_id')
-        model_activations = listen_to_v2(candidate, stimulus_set,reset_column='stimulus_id',average_sentence=False)
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimulus_id')
+        #model_activations = listen_to_v2(candidate, stimulus_set,reset_column='stimulus_id',average_sentence=False)
+        #model_activations = read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimulus_id')
         assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
 
         _logger.info('Scoring across experiments & atlases')
@@ -2110,7 +2121,81 @@ class Pereira2023audPassSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
         return super()._get_model_activations(candidate, reset_column='sentence_id',
                                               copy_columns=['stimulus_id'])
 
-class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
+
+class _Pereira2023audSentenceBenchmark(_Pereira2023audBenchmark):
+    def __init__(self, **kwargs):
+        super(_Pereira2023audSentenceBenchmark, self).__init__(**kwargs)
+    def _load_assembly(self,version='sent',threshold=90):
+        return super()._load_assembly(version='sent',threshold=90)
+
+    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            #sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+            #                                reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.sentence,
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{self._target_assembly.stimuli_group}-read-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+            num_words=len(str(part_stimuli.sentence.values[0]).split(' '))
+            assert(sentence_activations.shape[0]==num_words)
+            sentence_activations=sentence_activations[-1, :]
+            # for column in copy_columns:
+            #    sentence_activations[column] = ('presentation', part_stimuli[column])
+            activations.append(sentence_activations)
+
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
+               [int(s['stimulus_id'].values) for s in activations]]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        _logger.warning(f'extracting activation on {self._reset_column}')
+            # #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+            # #                                     reset_column='stimulus_id')
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimulus_id')
+        #model_activations = self._get_model_activations(candidate)
+
+        # make sure model_activations and target_assembly have the same order of stimuli
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(self._target_assembly,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activations, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
+
+
+
+class Pereira2023audSentRidgeEncoding(_Pereira2023audSentenceBenchmark):
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(Pereira2023audSentRidgeEncoding, self).__init__(metric=metric, **kwargs)
+class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audSentRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audSentSentenceRidgeEncoding, self).__init__(reset_column='stim_name',**kwargs)
     def _load_assembly(self, version='sent', threshold=90):
@@ -2121,7 +2206,7 @@ class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audRidgeEncoding):
     #     return super()._get_model_activations(candidate, reset_column='sentence_id',
     #                                           copy_columns=['stimulus_id'])
 
-class Pereira2023audSentPassageRidgeEncoding(Pereira2023audRidgeEncoding):
+class Pereira2023audSentPassageRidgeEncoding(Pereira2023audSentRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audSentPassageRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
     def _load_assembly(self, version='sent', threshold=90):
@@ -2132,7 +2217,7 @@ class Pereira2023audSentPassageRidgeEncoding(Pereira2023audRidgeEncoding):
     #     return super()._get_model_activations(candidate, reset_column='sentence_id',
     #                                           copy_columns=['stimulus_id'])
 
-class Pereira2023audPassPassageSampleRidgeEncoding(Pereira2023audRidgeEncoding):
+class Pereira2023audPassPassageSampleRidgeEncoding(Pereira2023audSentRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audPassPassageSampleRidgeEncoding, self).__init__(reset_column='stimulus_passage_category_id',**kwargs)
     def _load_assembly(self,version='pass',threshold=90):

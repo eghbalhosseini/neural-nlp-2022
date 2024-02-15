@@ -842,6 +842,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
             import torch
             self.model.eval()
             num_words = [len(sentence.split()) for sentence in sentences]
+            print(f'sentence {sentences} words:{num_words}')
+            #num_words = [len(sentences[idx].split()) for idx in range(sentences.shape[0])]
             text = copy.deepcopy(sentences)
             additional_tokens = []
             # If the tokenizer has a `cls_token`, we insert a `cls_token` at the beginning of the text
@@ -867,9 +869,11 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
                 max_num_words=max_num_words, additional_tokens=additional_tokens, use_special_tokens=use_special_tokens)
             encoded_layers = [[]] * len(self.layer_names)
             for context_ids in aligned_tokens:
+                True
                 # Convert inputs to PyTorch tensors
                 tokens_tensor = torch.tensor([context_ids])
-                tokens_tensor = tokens_tensor.to('cuda' if torch.cuda.is_available() else 'cpu')
+                #print(tokens_tensor)
+                tokens_tensor = tokens_tensor.to(self.model.device)
 
                 # Predict hidden states features for each layer
                 with torch.no_grad():
@@ -883,7 +887,7 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
                                   in zip(encoded_layers, word_encoding)]
             encoded_layers = [np.concatenate(layer_encoding, axis=1) for layer_encoding in encoded_layers]
             assert all(layer_encoding.shape[1] == sum(num_words) for layer_encoding in encoded_layers)
-            # separate into sentences again
+            # separate into sentences again notice there is num_words , and this is equal to the number of words in the sentence, so it goes from 0 to num_words
             sentence_encodings = [[layer_encoding[:, start:end, :] for start, end in
                                    zip(sentence_indices, sentence_indices[1:] + [sum(num_words)])]
                                   for layer_encoding in encoded_layers]
@@ -925,6 +929,8 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
                     context = np.insert(context, 0, tokenized_sentences[0])
                 context_ids = self.tokenizer.convert_tokens_to_ids(context)
                 yield context_ids
+
+
 
 
 class KeyedVectorModel(BrainModel, TaskModel):
