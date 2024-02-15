@@ -74,8 +74,7 @@ if __name__ =='__main__':
                                              layers=layers,
                                              sentence_average=word_last)
 
-    # score_results=score_function(benchmark=benchmark_tsk, model=model_identifier, model_impl=transformer,
-    #                  layers=list(brainscore_config['layers']))
+
     score_results = score_function(benchmark=benchmark_name, model=model_identifier, model_impl=transformer,
                                    layers=list(layers))
 
