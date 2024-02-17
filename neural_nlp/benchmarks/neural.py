@@ -57,13 +57,13 @@ def rgcv_linear_pearsonr(*args, regression_kwargs=None, correlation_kwargs=None,
 if getpass.getuser() == 'eghbalhosseini':
     ANNfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
     ANNECOG_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
-    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/.result_caching/.neural_nlp/'
+    PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset//'
     DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
 
 elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
-    PEREIRA2018_SAMPLE='/net/storage001.ib.cluster/om2/group/evlab/u/ehoseini/.result_caching/.neural_nlp/'
+    PEREIRA2018_SAMPLE='/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
 
 
@@ -584,6 +584,29 @@ class PereiraEncoding(_PereiraBenchmark):
     @load_s3(key='Pereira2018-encoding-ceiling')
     def ceiling(self):
         return super(PereiraEncoding, self).ceiling
+
+class PereiraLangEncoding(PereiraEncoding):
+    """
+    data source:
+        Pereira et al., nature communications 2018
+        https://www.nature.com/articles/s41467-018-03068-4?fbclid=IwAR0W7EZrnIFFO1kvANgeOEICaoDG5fhmdHipazy6n-APUJ6lMY98PkvuTyU
+    """
+    def _load_assembly(self,version='language'):
+        assembly=xr.load_dataarray(f'{PEREIRA2018_SAMPLE}/Pereira2018.nc')
+        # select only langauge atlas
+        language_atlas=assembly.atlas.values=='language'
+        assembly=assembly.sel(neuroid=language_atlas)
+        # copy over the attributes from assembly
+        # explicitly load the stimulus set
+        stimulus_set_file=assembly.attrs['stimulus_set'].replace('s3:',f'{PEREIRA2018_SAMPLE}/')
+        stimulus_set=pd.read_csv(stimulus_set_file)
+
+        assembly.attrs['stimulus_set']=StimulusSet(stimulus_set)
+        assembly.attrs['stimulus_set'].name='Pereira2018'
+        assembly.attrs['version']='language'
+        assembly=NeuroidAssembly(assembly)
+        return assembly
+
 
 class PereiraSamplerEncoding(_PereiraBenchmark):
     """
@@ -3363,7 +3386,8 @@ def consistency_neuroids(neuroids, ceiling_neuroids):
 
 def aggregate_ceiling(neuroid_scores, ceiling, subject_column='subject'):
     aggregate_raw = aggregate_neuroid_scores(neuroid_scores, subject_column=subject_column)
-    score = consistency(aggregate_raw, ceiling.sel(aggregation='center'))
+    ceiling_center=ceiling[(ceiling.aggregation=='center').values]
+    score = consistency(aggregate_raw, ceiling_center)
     score.attrs['raw'] = aggregate_raw
     score.attrs['ceiling'] = ceiling
     score.attrs['description'] = "ceiling-normalized score"
@@ -3377,6 +3401,7 @@ def consistency(score, ceiling):
 benchmark_pool = [
     # primary benchmarks
     ('Pereira2018-encoding', PereiraEncoding),
+    ('Pereira2018-lang-encoding', PereiraLangEncoding),
     ('Pereira2018-RDM', PereiraRDM),
     ('Pereira2018-max-encoding', PereiraSamplerMaxEncoding),
     ('Pereira2018-max-V2-encoding', PereiraSamplerMaxV2Encoding),
