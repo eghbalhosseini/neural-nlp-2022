@@ -872,7 +872,7 @@ class _PytorchTransformerWrapper(BrainModel, TaskModel):
                 True
                 # Convert inputs to PyTorch tensors
                 tokens_tensor = torch.tensor([context_ids])
-                #print(tokens_tensor)
+                print(self.tokenizer.decode(context_ids))
                 tokens_tensor = tokens_tensor.to(self.model.device)
 
                 # Predict hidden states features for each layer

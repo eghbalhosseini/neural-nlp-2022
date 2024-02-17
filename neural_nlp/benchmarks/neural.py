@@ -938,7 +938,7 @@ class _ANNSet1fMRIBenchmark(Benchmark):
             vox_corr_vec = (assembly.repetition_corr > -np.inf).values
         vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
         assembly = assembly.sel(neuroid=vox_selection)
-        assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI_{version}'
+        assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI'
         # drop the period in the end of sentences if they exist in the end
 
 
@@ -1949,7 +1949,7 @@ class _Pereira2023audBenchmark(Benchmark):
     def _load_assembly(self,version='sent', threshold=90):
         assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
-        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
         if vox_reliability['language'][0]:
             vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
@@ -2195,6 +2195,13 @@ class Pereira2023audSentRidgeEncoding(_Pereira2023audSentenceBenchmark):
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(Pereira2023audSentRidgeEncoding, self).__init__(metric=metric, **kwargs)
+class Pereira2023audSentSentenceEncoding(_Pereira2023audSentenceBenchmark):
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(Pereira2023audSentSentenceEncoding, self).__init__(metric=metric, **kwargs)
 class Pereira2023audSentSentenceRidgeEncoding(Pereira2023audSentRidgeEncoding):
     def __init__(self, **kwargs):
         super(Pereira2023audSentSentenceRidgeEncoding, self).__init__(reset_column='stim_name',**kwargs)
@@ -2286,17 +2293,17 @@ class Pereira2023audPassSentenceEncoding(Pereira2023audEncoding):
                                               copy_columns=['stimulus_id'])
 
 
-class Pereira2023audSentSentenceEncoding(Pereira2023audEncoding):
-    def __init__(self, **kwargs):
-        super(Pereira2023audSentSentenceEncoding, self).__init__(reset_column='stim_name', **kwargs)
-
-    def _load_assembly(self, version='sent', threshold=90):
-        return super()._load_assembly(version='sent', threshold=90)
-
-    # def _get_model_activations(self, candidate, reset_column='sentence_id',
-    #                            copy_columns=['sentence_id']):
-    #     return super()._get_model_activations(candidate, reset_column='sentence_id',
-    #                                           copy_columns=['stimulus_id'])
+# class Pereira2023audSentSentenceEncoding(Pereira2023audEncoding):
+#     def __init__(self, **kwargs):
+#         super(Pereira2023audSentSentenceEncoding, self).__init__(reset_column='stim_name', **kwargs)
+#
+#     def _load_assembly(self, version='sent', threshold=90):
+#         return super()._load_assembly(version='sent', threshold=90)
+#
+#     # def _get_model_activations(self, candidate, reset_column='sentence_id',
+#     #                            copy_columns=['sentence_id']):
+#     #     return super()._get_model_activations(candidate, reset_column='sentence_id',
+#     #                                           copy_columns=['stimulus_id'])
 
 
 class Pereira2023audSentPassageEncoding(Pereira2023audEncoding):
@@ -3379,13 +3386,14 @@ benchmark_pool = [
     ('Pereira2018-norm-v2-encoding',PereiraNormalizedEncoding_V2),
     ('Pereira2018-norm-sentence-encoding',PereiraNormalizedSentenceEncoding),
     ('Pereira2023aud-sent-RidgeEncoding', Pereira2023audSentRidgeEncoding),
+    ('Pereira2023aud-sent-sentence-Encoding', Pereira2023audSentSentenceEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
     ('Pereira2023aud-pass-passage-Encoding', Pereira2023audPassPassageEncoding),
     ('Pereira2023aud-pass-passage-sample-RidgeEncoding', Pereira2023audPassPassageSampleRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
     ('Pereira2023aud-pass-sentence-Encoding', Pereira2023audPassSentenceEncoding),
-    ('Pereira2023aud-sent-sentence-RidgeEncoding', Pereira2023audSentSentenceRidgeEncoding),
-    ('Pereira2023aud-sent-sentence-Encoding', Pereira2023audSentSentenceEncoding),
+    #('Pereira2023aud-sent-sentence-RidgeEncoding', Pereira2023audSentSentenceRidgeEncoding),
+
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
     ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
