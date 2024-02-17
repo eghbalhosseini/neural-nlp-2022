@@ -1131,11 +1131,11 @@ class ANNSet1fMRIBestEncoding(_ANNSet1fMRIBenchmark):
 
 
 
-    # @property
-    # def ceiling(self):
-    #     #ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
-    #     ceiling_val=super(ANNSet1fMRIBestEncoding, self).ceiling
-    #     return ceiling_val
+    @property
+    def ceiling(self):
+        #ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        ceiling_val=super(ANNSet1fMRIBestEncoding, self).ceiling
+        return ceiling_val
 
 class _ANNSet1fMRISentenceBenchmark(Benchmark):
     """
