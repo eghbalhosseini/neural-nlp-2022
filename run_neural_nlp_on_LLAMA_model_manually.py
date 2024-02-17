@@ -41,7 +41,7 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "ANNSet1fMRI-encoding"
+    benchmark_name = "Pereira2018-lang-encoding"
     modelname = '65B'
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
