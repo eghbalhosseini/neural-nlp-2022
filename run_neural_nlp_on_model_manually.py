@@ -22,8 +22,8 @@ elif user=='ehoseini':
 
 
 if __name__ =='__main__':
-    benchmark_name = "Pereira2018-lang-encoding"
-    model_name = "gpt2"
+    benchmark_name = "ANNSet1fMRI-best-encoding"
+    model_name = "gpt2-xl"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name

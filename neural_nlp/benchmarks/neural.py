@@ -910,7 +910,9 @@ class _ANNSet1fMRIBenchmark(Benchmark):
             #                                reset_column: list(set(part_stimuli[reset_column].values))})
             sentence_stimuli = StimulusSet({'sentence': part_stimuli.sentence,
                                             reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{self._target_assembly.identifier}-read-{reset_id}"
+            #self._target_assembly.attrs['stimuli_group']
+            #sentence_stimuli.name = f"{self._target_assembly.identifier}-read-{reset_id}"
+            sentence_stimuli.name = f"{self._target_assembly.attrs['stimuli_group']}-read-{reset_id}"
             sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
             num_words=len(str(part_stimuli.sentence.values[0]).split(' '))
             assert(sentence_activations.shape[0]==num_words)
