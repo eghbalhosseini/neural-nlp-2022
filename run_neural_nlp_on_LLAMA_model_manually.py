@@ -41,8 +41,8 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "Pereira2018-lang-encoding"
-    modelname = '65B'
+    benchmark_name = "ANNSet1fMRI-best-encoding"
+    modelname = '7B'
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
     tokenizer = LlamaTokenizer.from_pretrained(weight_path)
