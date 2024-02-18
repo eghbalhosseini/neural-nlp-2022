@@ -56,7 +56,7 @@ if __name__ =='__main__':
         model.to(mps_device)
     else:
         with init_empty_weights():
-            model = LlamaForCausalLM(modelConfig)
+            model = LlamaModel(modelConfig)
 
             device_map = infer_auto_device_map(model, no_split_module_classes=['LlamaDecoderLayer'],
                                        max_memory=max_memory_declaration)
