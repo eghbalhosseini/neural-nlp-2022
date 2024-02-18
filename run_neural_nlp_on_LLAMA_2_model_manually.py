@@ -43,7 +43,7 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "ANNSet1fMRI-encoding"
+    benchmark_name = "ANNSet1fMRI-best-encoding"
     modelname = '2_7B'
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
