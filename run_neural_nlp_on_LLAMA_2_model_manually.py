@@ -12,7 +12,7 @@ elif user=='ehoseini':
 
 from accelerate import init_empty_weights, Accelerator
 from accelerate import load_checkpoint_and_dispatch,infer_auto_device_map
-from transformers import LlamaModel, LlamaTokenizer,LlamaConfig
+from transformers import LlamaForCausalLM, LlamaTokenizer,LlamaConfig
 
 
 def get_gpu_memory_size(gpu_name):
@@ -52,11 +52,11 @@ if __name__ =='__main__':
     modelConfig = LlamaConfig.from_json_file(config_path)
     modelConfig.output_hidden_states = True
     if run_mps:
-        model = LlamaModel.from_pretrained(weight_path,config=modelConfig)
+        model = LlamaForCausalLM.from_pretrained(weight_path,config=modelConfig)
         model.to(mps_device)
     else:
         with init_empty_weights():
-            model = LlamaModel(modelConfig)
+            model = LlamaForCausalLM(modelConfig)
 
             device_map = infer_auto_device_map(model, no_split_module_classes=['LlamaDecoderLayer'],
                                        max_memory=max_memory_declaration)
