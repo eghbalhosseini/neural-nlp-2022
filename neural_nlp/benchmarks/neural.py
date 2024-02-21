@@ -1738,18 +1738,18 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
 
 class DsParametricfMRIFirstMaxRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
 
-    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repitition=0):
-        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repitition=0)
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
 
 class DsParametricfMRIFirstMinRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
 
-    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repitition=0):
-        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repitition=0)
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
 
 class DsParametricfMRIFirstRandRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
 
-    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repitition=0):
-        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repitition=0)
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0)
 
 
 class _DsParametricfMRIV2Benchmark(Benchmark):
