@@ -64,7 +64,7 @@ elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     PEREIRA2018_SAMPLE='/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
-    DsParametricfMRI_PARENT = '/om/weka/evlab/ehoseini/MyData/fmri_DNN/outputs/'
+    DsParametricfMRI_PARENT = '/nese/mit/group/evlab/u/ehoseini/MyData/fmri_DNN/outputs/'
 
 
 _logger = logging.getLogger(__name__)
@@ -916,7 +916,8 @@ class _ANNSet1fMRIBenchmark(Benchmark):
             sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
             num_words=len(str(part_stimuli.sentence.values[0]).split(' '))
             assert(sentence_activations.shape[0]==num_words)
-            sentence_activations=sentence_activations[-1, :]
+            sentence_activations = sentence_activations.isel(presentation=slice(-1,None))
+            #sentence_activations=sentence_activations[-1, :]
             # for column in copy_columns:
             #    sentence_activations[column] = ('presentation', part_stimuli[column])
             activations.append(sentence_activations)
@@ -1293,9 +1294,9 @@ class _DsParametricfMRIBenchmark(Benchmark):
         https://www.nature.com/articles/s41467-018-03068-4
     """
 
-    def __init__(self, identifier, metric,version='max',threshold=90):
+    def __init__(self, identifier, metric,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
         self._identifier = identifier
-        assembly = self._load_assembly(version=version,threshold=threshold)
+        assembly = self._load_assembly(version=version,group=group,threshold=threshold)
         self._target_assembly = assembly
         self._single_metric = metric
         # self._ceiler = self.PereiraExtrapolationCeiling(subject_column='subject', num_bootstraps=100)
@@ -1315,10 +1316,18 @@ class _DsParametricfMRIBenchmark(Benchmark):
         for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
             part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
             # stimulus_ids = part_stimuli['stimulus_id']
-            sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+            # sentence_stimuli = StimulusSet({'sentence': part_stimuli.values[0],
+            #                                reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli.sentence,
                                             reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{self._target_assembly.stimuli_group}-{reset_id}"
-            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1, :]
+            # self._target_assembly.attrs['stimuli_group']
+            # sentence_stimuli.name = f"{self._target_assembly.identifier}-read-{reset_id}"
+            sentence_stimuli.name = f"{stimulus_set.name}-read-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)
+            num_words = len(str(part_stimuli.sentence.values[0]).split(' '))
+            assert (sentence_activations.shape[0] == num_words)
+            #sentence_activations.sel(word=sentence_activations.word.values[-1],drop=False)
+            sentence_activations = sentence_activations.isel(presentation=slice(-1,None))
             # for column in copy_columns:
             #    sentence_activations[column] = ('presentation', part_stimuli[column])
             activations.append(sentence_activations)
@@ -1326,31 +1335,13 @@ class _DsParametricfMRIBenchmark(Benchmark):
         # model_activations = merge_data_arrays(activations)
         model_activations = xr.concat(activations, dim='presentation')
         # merging does not maintain stimulus order. the following orders again
-        idx = [model_activations['stim_group_id'].values.tolist().index(stimulus_id) for stimulus_id in
-               [int(s['stim_group_id'].values) for s in activations]]
+        idx = [model_activations[reset_column].values.tolist().index(stimulus_id) for stimulus_id in
+               [int(s[reset_column].values) for s in activations]]
         assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
         model_activations = model_activations[{'presentation': idx}]
 
         return model_activations
 
-    def _listen_to(self, candidate, stimulus_set, reset_column='stimulus_passage_index', average_sentence=False):
-        """
-        Pass a `stimulus_set` through a model `candidate`.
-        Operates on a sentence-based `stimulus_set`.
-        """
-        activations = []
-        for story in ordered_set(stimulus_set[reset_column].values):
-            story_stimuli = stimulus_set[stimulus_set[reset_column] == story].values
-            story_stimuli.name = f"{stimulus_set.name}-{story}"
-            story_activations = candidate(stimuli=story_stimuli, average_sentence=average_sentence)
-            activations.append(story_activations)
-        model_activations = merge_data_arrays(activations)
-        # merging does not maintain stimulus order. the following orders again
-        idx = [model_activations['stimulus_id'].values.tolist().index(stimulus_id) for stimulus_id in
-               itertools.chain.from_iterable(s['stimulus_id'].values for s in activations)]
-        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-        model_activations = model_activations[{'presentation': idx}]
-        return model_activations
 
     def _metric(self, source_assembly, target_assembly):
         """ for ceiling compute """
@@ -1363,12 +1354,16 @@ class _DsParametricfMRIBenchmark(Benchmark):
         return cross_scores.mean(['experiment', 'atlas'])
 
     # @load_s3(key='Pereira2018')
-    def _load_assembly(self,version='max',threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_V2.pkl')
+    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
-        assembly = assembly[assembly['stim_group'] == version]
+        if group=='all':
+            pass
+        else:
+            assembly = assembly[assembly['stim_group'] == group]
+
         if vox_reliability['language'][0]:
             vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
         else:
@@ -1380,60 +1375,34 @@ class _DsParametricfMRIBenchmark(Benchmark):
             vox_corr_vec = (assembly.repetition_corr > -np.inf).values
         vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
         assembly = assembly.sel(neuroid=vox_selection)
-        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version #+ f'_thr_{threshold}'
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + group #+ f'_thr_{threshold}'
+        if group=='all':
+            # assign a new coordinate called stimulus_id with values from stim_id
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_id.values)})
+        else:
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_group_id.values)})
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stim_group':assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        stimulus_set.name = assembly.attrs['stimuli_group']
+        assembly.attrs['stimulus_set'] = stimulus_set
         return assembly
-        
-        # UD_data = pd.read_pickle(f'{ANNfMRI_PARENT}/ud_sentencez_data_token_filter_v3_brainscore.pkl')
-        # sentence_texts = []
-        # for stim_id, stim in UD_data.groupby('stimulus_id'):
-        #     sentence_texts.append(np.unique(stim.text.values)[0])
-        # sentence_index = [sentence_texts.index(x) for x in assembly.stimulus.values]
-        # assert (len(sentence_index) == 200)
-        # selected_stim = []
-        # for sent_id in sentence_index:
-        #     location = (UD_data.stimulus_id == sent_id).values
-        #     selected_stim.append(UD_data.sel(index=location))
-        # 
-        # assert all([np.unique(x.text)[0] == assembly.stimulus.values[idx] for idx, x in enumerate(selected_stim)])
-        # stimulus_form = [' '.join(x.word_FORM.values) for x in selected_stim]
-        # 
-        # new_assembly = NeuroidAssembly(assembly.values, coords={
-        #     'experiment': ('presentation', assembly.experiment.values),
-        #     'stimulus_num': ('presentation', assembly.stimulus_num.values),
-        #     'stimulus_id': ('presentation', assembly.stimulus_id.values),
-        #     'sentence': ('presentation', stimulus_form),
-        #     'stimulus': ('presentation', stimulus_form),
-        #     'list_id': ('presentation', assembly.list_id.values),
-        #     'stim_type': ('presentation', assembly.stim_type.values),
-        #     'stim_name': ('presentation', assembly.stim_name.values),
-        #     'Trial_id': ('presentation', assembly.Trial_id.values),
-        #     'TR_onset': ('presentation', assembly.TR_onset.values),
-        #     'TR_recorded': ('presentation', assembly.TR_recorded.values),
-        #     'TR_duration': ('presentation', assembly.TR_duration.values),
-        #     'subject': ('neuroid', assembly.subject.values),
-        #     'neuroid_id': ('neuroid', assembly.neuroid_id.values),
-        #     'voxel_num': ('neuroid', assembly.voxel_num.values),
-        #     'repetition_corr_ratio': ('neuroid', assembly.repetition_corr_ratio.values),
-        #     'repetition_corr': ('neuroid', assembly.repetition_corr.values),
-        #     'roi': ('neuroid', assembly.roi.values),
-        #     'atlas': ('neuroid', assembly.atlas.values)
-        # }, dims=['presentation', 'neuroid'])
-        # new_assembly = new_assembly.sortby('stimulus_id')
-        # 
-        # new_assembly.attrs['identifier'] = assembly.identifier + '_wordForm'
-        # name = new_assembly.identifier.replace('.', '-')
-        # 
-        # return assembly
 
     def __call__(self, candidate):
-        stimulus_set = self._target_assembly['stimulus']
-        stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        #stimulus_set = stimulus_set.assign_coords({'sentence_id': ('presentation', stimulus_set.stimulus_id.values)})
 
-        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stim_group_id')
-        #model_activations = self._listen_to(candidate, stimulus_set, reset_column='stimulus_passage_index')
-        assert set(model_activations['stim_group_id'].values) == set(self._target_assembly['stim_group_id'].values)
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stimulus_id')
+        assert set(model_activations['stimulus_id'].values) == set(self._target_assembly['stimulus_id'].values)
         # add a new cooordinate called stimulus_id
-        model_activations = model_activations.assign_coords({'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
+        #model_activations = model_activations.assign_coords({'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
         # for target assembly go through all coordsinate and assign them again
         #coords = {coord: coord_value for coord, coord_value in self._target_assembly.coords.items() }
         _logger.info('Scoring across experiments & atlases')
@@ -1455,7 +1424,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
     def _apply_cross(self, source_assembly, cross_assembly):
         cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
         source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
-        assert len(cross_assembly['presentation']) in [80]
+        #assert len(cross_assembly['presentation']) in [80]
         assert not np.isnan(cross_assembly).any()
         source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
                                                             for stimulus_id in source_assembly['stimulus_id'].values]}]
@@ -1506,149 +1475,6 @@ class _DsParametricfMRIBenchmark(Benchmark):
 #     def _average_cross_scores(self, cross_scores):
 #         return super(_DsParametricSujectwise, self)._average_cross_scores(cross_scores).median('subject')
 
-class DsParametricRDM(_DsParametricfMRIBenchmark):
-    def __init__(self, **kwargs):
-        metric=rsa_correlation()
-        super(DsParametricRDM, self).__init__(metric=metric, **kwargs)
-    def _load_assembly(self, version='max', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_V2.pkl')
-        # select stimuli that have the stim_group= version
-        vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
-        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
-        assembly = assembly[:,assembly['stim_group'].values == version,:]
-        if vox_reliability['language'][0]:
-            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
-        else:
-            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
-
-        if vox_corr['language'][0]:
-            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
-        else:
-            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
-        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
-        assembly = assembly.sel(neuroid=vox_selection)
-        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version  # + f'_thr_{threshold}'
-
-        rep_list = []
-        for rep_id, rep in assembly.groupby('repeat'):
-            rep_list.append(
-                rep.assign_coords({'repeat_id': ('neuroid', (np.ones(rep.shape[1]).astype(int) * rep.repeat.values))}))
-        rep_xr = xr.concat(rep_list, 'presentation')
-        # seperate the data based on subject:
-        rsa_dataset = []
-        for sub_id, sub_dat in rep_xr.groupby('subject'):
-            descriptors = {'subject': sub_dat.subject.values[0]
-                           }
-            ch_descriptors = {'neuroid': sub_dat.neuroid_id.values,
-                              'roi': sub_dat.roi.values}
-
-            obs_descriptors = {'stimulus_id': sub_dat.stimulus_id.values,
-                               'stimulus_num': sub_dat.stimulus_num.values,
-                               'sentence': sub_dat.sentence.values,
-                               'stimulus': sub_dat.stimulus.values,
-                               'session': sub_dat.repeat_id.values[:, 0],
-                               }
-            rsa_dataset.append(
-                rsd.Dataset(measurements=sub_dat.values, descriptors=descriptors, obs_descriptors=obs_descriptors,
-                            channel_descriptors=ch_descriptors))
-        stimulus_passage_category_id = [f'{assembly["stim_group"].values[i]}_{assembly["stim_group_id"].values[i]}' for i in range(len(assembly['stim_group_id'].values))]
-        # use assign coords to add the new stimulus_passage_category_id to presentation diemsnions to the assembly
-        assembly = assembly.assign_coords(stimulus_group_category_id=('presentation', stimulus_passage_category_id))
-
-        # construct stimulus set from the assembly
-        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
-                                    'stimulus_num': assembly['stimulus_num'].values,
-                                    'stimulus_id': assembly['stimulus_id'].values,
-                                    'stim_group': assembly['stim_group'].values,
-                                    'stim_group_id': assembly['stim_group_id'].values,
-                                    'stim_name': assembly['stim_name'].values,
-                                    'experiment': assembly['experiment'].values,
-                                    'stumulus': assembly['stimulus'].values,
-                                    'sentence_id': assembly['stimulus_id'].values,
-                                    'stimulus_group_category_id': assembly['stimulus_group_category_id'].values})
-        # attach stimulus set as an attribute to the assembly
-        # add name to stimulus set
-        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
-        assembly.attrs['stimulus_set'] = stimulus_set   
-        
-        rsa_dict={}
-        # add rsa dataset and stimulsset to the dictionary
-        rsa_dict['rsa_dataset']=rsa_dataset
-        rsa_dict['stimulus_set']=stimulus_set
-        return rsa_dict
-    
-    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
-        """
-        Pass a `stimulus_set` through a model `candidate`.
-        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
-        """
-        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
-        activations = []
-        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
-            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
-            # stimulus_ids = part_stimuli['stimulus_id']
-            sentence_stimuli = StimulusSet({'sentence': part_stimuli['sentence'].values,
-                                            reset_column: list(set(part_stimuli[reset_column].values))})
-            sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
-            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1, :]
-            # for column in copy_columns:
-            #    sentence_activations[column] = ('presentation', part_stimuli[column])
-            activations.append(sentence_activations)
-
-        # model_activations = merge_data_arrays(activations)
-        model_activations = xr.concat(activations, dim='presentation')
-        # merging does not maintain stimulus order. the following orders again
-        idx = [model_activations['stim_group_id'].values.tolist().index(stimulus_id) for stimulus_id in
-               [int(s['stim_group_id'].values) for s in activations]]
-        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
-        model_activations = model_activations[{'presentation': idx}]
-
-        return model_activations
-    
-    def _apply_cross(self, source_assembly, cross_assembly):
-        cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
-        source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
-        assert len(cross_assembly['presentation']) in [80]
-        assert not np.isnan(cross_assembly).any()
-        source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
-                                                            for stimulus_id in source_assembly['stimulus_id'].values]}]
-        return self._metric(source_assembly, cross_assembly)
-    
-    def __call__(self, candidate):
-        stimulus_set = self._target_assembly['stimulus_set']
-        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],reset_column='stim_group_id')
-        # add a new cooordinate called stimulus_id
-        model_activations = model_activations.assign_coords({'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
-        descriptors = {'model': candidate._model.identifier,
-                       }
-        obs_descriptors = {'stimulus_id': model_activations.stimulus_id.values,
-                           'stimulus': model_activations.presentation.sentence.values}
-        ch_descriptors = {'neuroid': model_activations.neuroid_id.values,
-                          'neuron_number_in_layer': model_activations.neuroid_num.values}
-        predictions_rsd = rsd.Dataset(model_activations.values, descriptors=descriptors,
-                                      obs_descriptors=obs_descriptors, channel_descriptors=ch_descriptors)
-        # for target assembly go through all coordsinate and assign them again
-        #coords = {coord: coord_value for coord, coord_value in self._target_assembly.coords.items() }
-        _logger.info('Scoring across experiments & atlases')
-        raw_score = self._single_metric(predictions_rsd, self._target_assembly['rsa_dataset'])
-        score = Score([raw_score.get_means(), raw_score.get_errorbars()[0]],
-                      coords={'aggregation': ['center', 'error'], },
-                      dims=['aggregation', 'layer'])
-        score.attrs['raw'] = raw_score
-        score.attrs['noise_ceiling'] = raw_score.get_noise_ceil()
-        return score
-
-class DsParametricRDMMax(DsParametricRDM):
-    def _load_assembly(self,version='max',threshold=90):
-        return super()._load_assembly(version='max',threshold=90)
-
-class DsParametricRDMMin(DsParametricRDM):
-    def _load_assembly(self,version='min',threshold=90):
-        return super()._load_assembly(version='min',threshold=90)
-
-class DsParametricRDMRand(DsParametricRDM):
-    def _load_assembly(self,version='random',threshold=90):
-        return super()._load_assembly(version='random',threshold=90)
 
 
 
@@ -1661,7 +1487,7 @@ class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
         metric = CrossRegressedCorrelation(
             regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
             correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
-            crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricfMRIEncoding, self).__init__(metric=metric, **kwargs)
 
 
@@ -1670,17 +1496,46 @@ class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
     #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
     #     return ceiling_val
     
-class DsParametricfMRIMaxEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='max',threshold=90):
-        return super()._load_assembly(version='max',threshold=90)
+class DsParametricfMRISharedMaxEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language',group='max',threshold=90)
 
-class DsParametricfMRIMinEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='min',threshold=90):
-        return super()._load_assembly(version='min',threshold=90)
+class DsParametricfMRIFullMaxEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self,version='DsParametricfMRI_subs_12_language',group='max',threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language',group='max',threshold=90)
 
-class DsParametricfMRIRandEncoding(DsParametricfMRIEncoding):
-    def _load_assembly(self,version='random',threshold=90):
-        return super()._load_assembly(version='random',threshold=90)
+
+class DsParametricfMRIShared70MaxEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='max',threshold=70):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language',group='max',threshold=70)
+
+class DsParametricfMRISharedMinEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='min', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='min', threshold=90)
+
+class DsParametricfMRIFullMinEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='min', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language', group='min', threshold=90)
+
+class DsParametricfMRIShared70MinEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='min',threshold=70):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language',group='min',threshold=70)
+
+class DsParametricfMRIShared70RandEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='random',threshold=70):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language',group='random',threshold=70)
+
+
+class DsParametricfMRISharedRandEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='random', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='random', threshold=90)
+
+class DsParametricfMRIFullRandEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='random', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language', group='random', threshold=90)
+class DsParametricfMRISharedAllEncoding(DsParametricfMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='all', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='all', threshold=90)
 
 class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     """
@@ -1700,9 +1555,17 @@ class DsParametricfMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     #     ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
     #     return ceiling_val
 
-class DsParametricfMRIMaxV1RidgeEncoding(DsParametricfMRIRidgeEncoding):
-    def _load_assembly(self,version='max',threshold=90):
-        return super()._load_assembly(version='max',threshold=90)
+class DsParametricfMRISharedMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='max', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='max', threshold=90)
+
+class DsParametricfMRISharedMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='min', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='min', threshold=90)
+class DsParametricfMRISharedRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='random', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='random', threshold=90)
+
 
 class DsParametricfMRIMaxV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='max',threshold=80):
@@ -1742,6 +1605,151 @@ class DsParametricfMRIMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
 class DsParametricfMRIRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='random',threshold=90):
         return super()._load_assembly(version='random',threshold=90)
+
+class DsParametricSinglefMRIEncoding(_DsParametricfMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(DsParametricSinglefMRIEncoding, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        # select first repetion
+        assembly = assembly[{'repeat':repetition}]
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (True, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if group=='all':
+            pass
+        else:
+            assembly = assembly[assembly['stim_group'] == group]
+
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + group #+ f'_thr_{threshold}'
+        if group=='all':
+            # assign a new coordinate called stimulus_id with values from stim_id
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_id.values)})
+        else:
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_group_id.values)})
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stim_group':assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        stimulus_set.name = assembly.attrs['stimuli_group']
+        assembly.attrs['stimulus_set'] = stimulus_set
+        return assembly
+
+class DsParametricfMRIFirstMaxEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
+
+class DsParametricfMRIFirstMinEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
+class DsParametricfMRIFirstRandEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0)
+
+
+class DsParametricfMRISecondMaxEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+
+class DsParametricfMRISecondMinEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1)
+class DsParametricfMRISecondRandEncoding(DsParametricSinglefMRIEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
+
+class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(DsParametricSinglefMRIRidgeEncoding, self).__init__(metric=metric, **kwargs)
+    def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        # select first repetion
+        assembly = assembly[{'repeat':repetition}]
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (True, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if group=='all':
+            pass
+        else:
+            assembly = assembly[assembly['stim_group'] == group]
+
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + group #+ f'_thr_{threshold}'
+        if group=='all':
+            # assign a new coordinate called stimulus_id with values from stim_id
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_id.values)})
+        else:
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_group_id.values)})
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stim_group':assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        stimulus_set.name = assembly.attrs['stimuli_group']
+        assembly.attrs['stimulus_set'] = stimulus_set
+        return assembly
+
+
+class DsParametricfMRIFirstMaxRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repitition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repitition=0)
+
+class DsParametricfMRIFirstMinRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repitition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repitition=0)
+
+class DsParametricfMRIFirstRandRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repitition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repitition=0)
 
 
 class _DsParametricfMRIV2Benchmark(Benchmark):
@@ -1933,6 +1941,159 @@ class DsParametricfMRIMinPLSEncoding(DsParametricfMRIRidgeEncoding):
 class DsParametricfMRIRandPLSEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='random'):
         return super()._load_assembly(version='random')
+
+
+class DsParametricRDM(_DsParametricfMRIBenchmark):
+    def __init__(self, **kwargs):
+        metric = rsa_correlation()
+        super(DsParametricRDM, self).__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self, version='max', threshold=90):
+        assembly = pd.read_pickle(
+            f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_V2.pkl')
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        assembly = assembly[:, assembly['stim_group'].values == version, :]
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + version  # + f'_thr_{threshold}'
+
+        rep_list = []
+        for rep_id, rep in assembly.groupby('repeat'):
+            rep_list.append(
+                rep.assign_coords({'repeat_id': ('neuroid', (np.ones(rep.shape[1]).astype(int) * rep.repeat.values))}))
+        rep_xr = xr.concat(rep_list, 'presentation')
+        # seperate the data based on subject:
+        rsa_dataset = []
+        for sub_id, sub_dat in rep_xr.groupby('subject'):
+            descriptors = {'subject': sub_dat.subject.values[0]
+                           }
+            ch_descriptors = {'neuroid': sub_dat.neuroid_id.values,
+                              'roi': sub_dat.roi.values}
+
+            obs_descriptors = {'stimulus_id': sub_dat.stimulus_id.values,
+                               'stimulus_num': sub_dat.stimulus_num.values,
+                               'sentence': sub_dat.sentence.values,
+                               'stimulus': sub_dat.stimulus.values,
+                               'session': sub_dat.repeat_id.values[:, 0],
+                               }
+            rsa_dataset.append(
+                rsd.Dataset(measurements=sub_dat.values, descriptors=descriptors, obs_descriptors=obs_descriptors,
+                            channel_descriptors=ch_descriptors))
+        stimulus_passage_category_id = [f'{assembly["stim_group"].values[i]}_{assembly["stim_group_id"].values[i]}' for
+                                        i in range(len(assembly['stim_group_id'].values))]
+        # use assign coords to add the new stimulus_passage_category_id to presentation diemsnions to the assembly
+        assembly = assembly.assign_coords(stimulus_group_category_id=('presentation', stimulus_passage_category_id))
+
+        # construct stimulus set from the assembly
+        stimulus_set = StimulusSet({'sentence': assembly['stimulus'].values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_group': assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'experiment': assembly['experiment'].values,
+                                    'stumulus': assembly['stimulus'].values,
+                                    'sentence_id': assembly['stimulus_id'].values,
+                                    'stimulus_group_category_id': assembly['stimulus_group_category_id'].values})
+        # attach stimulus set as an attribute to the assembly
+        # add name to stimulus set
+        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
+        assembly.attrs['stimulus_set'] = stimulus_set
+
+        rsa_dict = {}
+        # add rsa dataset and stimulsset to the dictionary
+        rsa_dict['rsa_dataset'] = rsa_dataset
+        rsa_dict['stimulus_set'] = stimulus_set
+        return rsa_dict
+
+    def _read_words(self, candidate, stimulus_set, reset_column='stimulus_id', copy_columns=(), average_sentence=False):
+        """
+        Pass a `stimulus_set` through a model `candidate`.
+        In contrast to the `listen_to` function, this function operates on a word-based `stimulus_set`.
+        """
+        # Input: stimulus_set = pandas df, col 1 with sentence ID and 2nd col as word.
+        activations = []
+        for i, reset_id in enumerate(ordered_set(stimulus_set[reset_column].values)):
+            part_stimuli = stimulus_set[stimulus_set[reset_column] == reset_id]
+            # stimulus_ids = part_stimuli['stimulus_id']
+            sentence_stimuli = StimulusSet({'sentence': part_stimuli['sentence'].values,
+                                            reset_column: list(set(part_stimuli[reset_column].values))})
+            sentence_stimuli.name = f"{stimulus_set.name}-{reset_id}"
+            sentence_activations = candidate(stimuli=sentence_stimuli, average_sentence=average_sentence)[-1, :]
+            # for column in copy_columns:
+            #    sentence_activations[column] = ('presentation', part_stimuli[column])
+            activations.append(sentence_activations)
+
+        # model_activations = merge_data_arrays(activations)
+        model_activations = xr.concat(activations, dim='presentation')
+        # merging does not maintain stimulus order. the following orders again
+        idx = [model_activations['stim_group_id'].values.tolist().index(stimulus_id) for stimulus_id in
+               [int(s['stim_group_id'].values) for s in activations]]
+        assert len(set(idx)) == len(idx), "Found duplicate indices to order activations"
+        model_activations = model_activations[{'presentation': idx}]
+
+        return model_activations
+
+    def _apply_cross(self, source_assembly, cross_assembly):
+        cross_assembly = cross_assembly.dropna('neuroid')  # some subjects have only done one experiment
+        source_assembly = source_assembly.dropna('neuroid')  # only relevant when running audio-visual self as "model"
+        assert len(cross_assembly['presentation']) in [80]
+        assert not np.isnan(cross_assembly).any()
+        source_assembly = source_assembly[{'presentation': [stimulus_id in cross_assembly['stimulus_id'].values
+                                                            for stimulus_id in source_assembly['stimulus_id'].values]}]
+        return self._metric(source_assembly, cross_assembly)
+
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly['stimulus_set']
+        model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+                                             reset_column='stim_group_id')
+        # add a new cooordinate called stimulus_id
+        model_activations = model_activations.assign_coords(
+            {'stimulus_id': ('presentation', model_activations.stim_group_id.values)})
+        descriptors = {'model': candidate._model.identifier,
+                       }
+        obs_descriptors = {'stimulus_id': model_activations.stimulus_id.values,
+                           'stimulus': model_activations.presentation.sentence.values}
+        ch_descriptors = {'neuroid': model_activations.neuroid_id.values,
+                          'neuron_number_in_layer': model_activations.neuroid_num.values}
+        predictions_rsd = rsd.Dataset(model_activations.values, descriptors=descriptors,
+                                      obs_descriptors=obs_descriptors, channel_descriptors=ch_descriptors)
+        # for target assembly go through all coordsinate and assign them again
+        # coords = {coord: coord_value for coord, coord_value in self._target_assembly.coords.items() }
+        _logger.info('Scoring across experiments & atlases')
+        raw_score = self._single_metric(predictions_rsd, self._target_assembly['rsa_dataset'])
+        score = Score([raw_score.get_means(), raw_score.get_errorbars()[0]],
+                      coords={'aggregation': ['center', 'error'], },
+                      dims=['aggregation', 'layer'])
+        score.attrs['raw'] = raw_score
+        score.attrs['noise_ceiling'] = raw_score.get_noise_ceil()
+        return score
+
+
+class DsParametricRDMMax(DsParametricRDM):
+    def _load_assembly(self, version='max', threshold=90):
+        return super()._load_assembly(version='max', threshold=90)
+
+
+class DsParametricRDMMin(DsParametricRDM):
+    def _load_assembly(self, version='min', threshold=90):
+        return super()._load_assembly(version='min', threshold=90)
+
+
+class DsParametricRDMRand(DsParametricRDM):
+    def _load_assembly(self, version='random', threshold=90):
+        return super()._load_assembly(version='random', threshold=90)
 
 class _Pereira2023audBenchmark(Benchmark):
     """
@@ -3446,13 +3607,32 @@ benchmark_pool = [
 
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
-    ('DsParametricfMRI-max-encoding', DsParametricfMRIMaxEncoding),
-    ('DsParametricfMRI-min-encoding', DsParametricfMRIMinEncoding),
-    ('DsParametricfMRI-rand-encoding', DsParametricfMRIRandEncoding),
+    ('DsParametricfMRI-shared-90-max-encoding', DsParametricfMRISharedMaxEncoding),
+    ('DsParametricfMRI-full-90-max-encoding', DsParametricfMRIFullMaxEncoding),
+    ('DsParametricfMRI-shared-70-max-encoding', DsParametricfMRIShared70MaxEncoding),
+    ('DsParametricfMRI-shared-min-encoding', DsParametricfMRISharedMinEncoding),
+    ('DsParametricfMRI-full-90-min-encoding', DsParametricfMRIFullMinEncoding),
+    ('DsParametricfMRI-shared-70-min-encoding', DsParametricfMRIShared70MinEncoding),
+    ('DsParametricfMRI-shared-rand-encoding', DsParametricfMRISharedRandEncoding),
+        ('DsParametricfMRI-full-90-rand-encoding', DsParametricfMRIFullRandEncoding),
+    ('DsParametricfMRI-shared-70-rand-encoding', DsParametricfMRIShared70RandEncoding),
+    ('DsParametricfMRI-shared-all-encoding', DsParametricfMRISharedAllEncoding),
 
-    ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxV1RidgeEncoding),
-    ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinV1RidgeEncoding),
-    ('DsParametricfMRI_v1-rand-RidgeEncoding', DsParametricfMRIRandV1RidgeEncoding),
+    ('DsParametricfMRI-shared-max-RidgeEncoding', DsParametricfMRISharedMaxRidgeEncoding),
+    ('DsParametricfMRI-shared-min-RidgeEncoding', DsParametricfMRISharedMinRidgeEncoding),
+    ('DsParametricfMRI-shared-rand-RidgeEncoding', DsParametricfMRISharedRandRidgeEncoding),
+
+    ('DsParametricfMRI-first-max-Encoding', DsParametricfMRIFirstMaxEncoding),
+    ('DsParametricfMRI-first-min-Encoding', DsParametricfMRIFirstMinEncoding),
+    ('DsParametricfMRI-first-rand-Encoding', DsParametricfMRIFirstRandEncoding),
+
+    ('DsParametricfMRI-first-max-RidgeEncoding', DsParametricfMRIFirstMaxRidgeEncoding),
+    ('DsParametricfMRI-first-min-RidgeEncoding', DsParametricfMRIFirstMinRidgeEncoding),
+    ('DsParametricfMRI-first-rand-RidgeEncoding', DsParametricfMRIFirstRandRidgeEncoding),
+
+    # ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxV1RidgeEncoding),
+    # ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinV1RidgeEncoding),
+    # ('DsParametricfMRI_v1-rand-RidgeEncoding', DsParametricfMRIRandV1RidgeEncoding),
 
     ('DsParametricfMRI_v2-max-RidgeEncoding', DsParametricfMRIMaxV2RidgeEncoding),
     ('DsParametricfMRI_v2-min-RidgeEncoding', DsParametricfMRIMinV2RidgeEncoding),
