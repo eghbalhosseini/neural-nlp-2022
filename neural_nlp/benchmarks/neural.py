@@ -1763,7 +1763,7 @@ class DsParametricfMRI80SecondRandEncoding(DsParametricSinglefMRIEncoding):
                                       repetition=1)
 class DsParametricfMRI80SecondMaxEncoding(DsParametricSinglefMRIEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=80,repetition=1):
-        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=80,repetition=1)
 
 
 class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
