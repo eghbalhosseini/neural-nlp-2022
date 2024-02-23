@@ -30,8 +30,7 @@ if __name__ =='__main__':
     num_bootstraps=args.num_bootstraps
     # pull the benchmark and compute the ceiling, it will be saved in result_caching folder
     benchmark=benchmark_pool[benchmark_name]
-    bench_metric = benchmark._metric
-    bench_metric._show_tqdm = False
+    bench_metric=benchmark._single_metric
     bench_regression = bench_metric.regression
     bench_correlation = bench_metric.correlation
     bench_cross_val = bench_metric.cross_validation
