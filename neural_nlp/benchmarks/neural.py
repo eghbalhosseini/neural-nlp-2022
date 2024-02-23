@@ -1684,7 +1684,7 @@ class DsParametricfMRISecondRandEncoding(DsParametricSinglefMRIEncoding):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
 
 # do instead of .1, top 10% of relaiblity in voxel for each subject
-class DsParametricfMRISingleReliableMaxEncoding(DsParametricSinglefMRIEncoding):
+class DsParametricfMRISingleReliableEncoding(DsParametricSinglefMRIEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90, repetition=0):
         assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
         # select first repetion
@@ -1721,27 +1721,96 @@ class DsParametricfMRISingleReliableMaxEncoding(DsParametricSinglefMRIEncoding):
         return assembly
 
 
-class DsParametricfMRIFirstReliableMaxEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRIFirstReliableMaxEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
 
-class DsParametricfMRIFirstReliableMinEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRIFirstReliableMinEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
-class DsParametricfMRIFirstReliableRandEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRIFirstReliableRandEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0)
 
-class DsParametricfMRISecondReliableMaxEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRISecondReliableMaxEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
 
-class DsParametricfMRISecondReliableMinEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRISecondReliableMinEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1)
-class DsParametricfMRISecondReliableRandEncoding(DsParametricfMRISingleReliableMaxEncoding):
+class DsParametricfMRISecondReliableRandEncoding(DsParametricfMRISingleReliableEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
+
+
+class DsParametricSinglefMRIAllEncoding(DsParametricSinglefMRIEncoding):
+
+    def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        # select first repetion
+        assembly = assembly[{'repeat':repetition}]
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if group=='all':
+            pass
+        else:
+            assembly = assembly[assembly['stim_group'] == group]
+
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + group #+ f'_thr_{threshold}'
+        if group=='all':
+            # assign a new coordinate called stimulus_id with values from stim_id
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_id.values)})
+        else:
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_group_id.values)})
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stim_group':assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        stimulus_set.name = assembly.attrs['stimuli_group']
+        assembly.attrs['stimulus_set'] = stimulus_set
+        return assembly
+
+class DsParametricfMRIFirstAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
+
+class DsParametricfMRIFirstAllMinEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
+class DsParametricfMRIFirstAllRandEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0)
+class DsParametricfMRISecondAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMinEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1)
+class DsParametricfMRISecondAllRandEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
 
 class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
     """
@@ -3865,6 +3934,14 @@ benchmark_pool = [
     ('DsParametricfMRI-second-reliable-max-Encoding', DsParametricfMRISecondReliableMaxEncoding),
     ('DsParametricfMRI-second-reliable-min-Encoding', DsParametricfMRISecondReliableMinEncoding),
     ('DsParametricfMRI-second-reliable-rand-Encoding', DsParametricfMRISecondReliableRandEncoding),
+
+    ('DsParametricfMRI-first-all-max-Encoding', DsParametricfMRIFirstAllMaxEncoding),
+    ('DsParametricfMRI-first-all-min-Encoding', DsParametricfMRIFirstAllMinEncoding),
+    ('DsParametricfMRI-first-all-rand-Encoding', DsParametricfMRIFirstAllRandEncoding),
+
+    ('DsParametricfMRI-second-all-max-Encoding', DsParametricfMRISecondAllMaxEncoding),
+    ('DsParametricfMRI-second-all-min-Encoding', DsParametricfMRISecondAllMinEncoding),
+    ('DsParametricfMRI-second-all-rand-Encoding', DsParametricfMRISecondAllRandEncoding),
 
     ('DsParametricfMRI-80-first-max-Encoding', DsParametricfMRI80FirstMaxEncoding),
     ('DsParametricfMRI-80-first-min-Encoding', DsParametricfMRI80FirstMinEncoding),
