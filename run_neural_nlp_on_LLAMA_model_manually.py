@@ -41,7 +41,7 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "DsParametricfMRI-first-all-max-Encoding"
+    benchmark_name = "DsParametricfMRI-second-all-max-Encoding"
     modelname = '7B'
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
