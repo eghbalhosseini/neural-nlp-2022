@@ -41,7 +41,7 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "DsParametricfMRI-first-all-min-Encoding"
+    benchmark_name = "DsParametricfMRI-first-second-min-Encoding"
     modelname = '7B'
 
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
