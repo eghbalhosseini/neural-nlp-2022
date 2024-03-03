@@ -18,12 +18,20 @@ elif user=='ehoseini':
 
 #GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'CONFIG_ARCHIVE_MAP','distilgpt2-config.json')}
 #GPT2_PRETRAINED_MODEL_ARCHIVE_MAP = {"distilgpt2": os.path.join(model_and_config_dir,'MODEL_ARCHIVE_MAP','distilgpt2-pytorch_model.bin')}
+# model_layers = [('roberta-base', 'encoder.layer.1'),
+#                 ('xlnet-large-cased', 'encoder.layer.23'),
+#                 ('bert-large-uncased-whole-word-masking', 'encoder.layer.11.output'),
+#                 ('xlm-mlm-en-2048', 'encoder.layer_norm2.11'),
+#                 ('gpt2-xl', 'encoder.h.43'),
+#                 ('albert-xxlarge-v2', 'encoder.albert_layer_groups.4'),
+#                 ('ctrl', 'h.46')
+#                 ('gpt2', 'encoder.h.11')]
 
 
 
 if __name__ =='__main__':
-    benchmark_name = "ANNSet1fMRI-best-encoding"
-    model_name = "gpt2-xl"
+    benchmark_name = 'DsParametricfMRI-first-max-RidgeEncoding'
+    model_name = "xlnet-large-cased"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name

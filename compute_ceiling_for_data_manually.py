@@ -18,13 +18,12 @@ print(variable_value)
 
 
 if __name__ =='__main__':
-
-    benchmark_name = "ANNSet1fMRI-best-encoding"
+    benchmark_name = "DsParametricfMRI-full-90-max-encoding"
     benchmark=benchmark_pool[benchmark_name]
     # load _target_assembly
     # save_target_assembly as a netcdf file
     # drop attributes for voxel selection
-    bench_metric=benchmark._metric
+    bench_metric=benchmark._single_metric
     # number of subsamples is how mant of combination (n choose k) we want to sample. for large number of subjects this can be very large
     bench_regression=bench_metric.regression
     bench_correlation=bench_metric.correlation
