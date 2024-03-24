@@ -27,11 +27,9 @@ elif user=='ehoseini':
 #                 ('ctrl', 'h.46')
 #                 ('gpt2', 'encoder.h.11')]
 
-
-
 if __name__ =='__main__':
-    benchmark_name = 'DsParametricfMRI-first-max-RidgeEncoding'
-    model_name = "xlnet-large-cased"
+    benchmark_name = 'DsParametricfMRI-first-reliable-rand-RidgeEncoding'
+    model_name = "roberta-base"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name

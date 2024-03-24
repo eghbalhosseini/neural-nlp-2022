@@ -1805,6 +1805,85 @@ class DsParametricfMRISecondReliableRandEncoding(DsParametricfMRISingleReliableE
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
 
 
+
+
+class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=rgcv_linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super().__init__(metric=metric, **kwargs)
+
+    def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        # select first repetion
+        assembly = assembly[{'repeat':repetition}]
+        # select stimuli that have the stim_group= version
+        vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
+        vox_corr = {'language': (True, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        if group=='all':
+            pass
+        else:
+            assembly = assembly[assembly['stim_group'] == group]
+
+        if vox_reliability['language'][0]:
+            vox_rel_vec = (assembly.repetition_corr_ratio > vox_reliability['language'][1]).values
+        else:
+            vox_rel_vec = (assembly.repetition_corr_ratio > -np.inf).values
+
+        if vox_corr['language'][0]:
+            vox_corr_vec = (assembly.repetition_corr > vox_corr['language'][1]).values
+        else:
+            vox_corr_vec = (assembly.repetition_corr > -np.inf).values
+        vox_selection = np.logical_and(vox_corr_vec, vox_rel_vec)
+        assembly = assembly.sel(neuroid=vox_selection)
+        assembly.attrs['stimuli_group'] = 'DsParametricfMRI_' + group #+ f'_thr_{threshold}'
+        if group=='all':
+            # assign a new coordinate called stimulus_id with values from stim_id
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_id.values)})
+        else:
+            assembly=assembly.assign_coords({'stimulus_id': ('presentation', assembly.stim_group_id.values)})
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stim_group':assembly['stim_group'].values,
+                                    'stim_group_id': assembly['stim_group_id'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+        stimulus_set.name = assembly.attrs['stimuli_group']
+        assembly.attrs['stimulus_set'] = stimulus_set
+        return assembly
+#
+class DsParametricfMRIFirstReliableMaxRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
+#
+class DsParametricfMRIFirstReliableMinRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
+class DsParametricfMRIFirstReliableRandRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=0)
+
+class DsParametricfMRISecondReliableMaxRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+
+class DsParametricfMRISecondReliableMinRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=1)
+class DsParametricfMRISecondReliableRandRidgeEncoding(DsParametricSinglefMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
+
 class DsParametricSinglefMRIAllEncoding(DsParametricSinglefMRIEncoding):
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
@@ -2846,6 +2925,37 @@ class Pereira2023audPassPassageEncoding(Pereira2023audEncoding):
     def _load_assembly(self, version='pass', threshold=90):
         return super()._load_assembly(version='pass', threshold=90)
 
+
+class Pereira2023audPassPassageSampleEncoding(Pereira2023audPassPassageEncoding):
+    def __call__(self, candidate):
+        stimulus_set = self._target_assembly.attrs['stimulus_set']
+        _logger.warning(f'extracting activation on {self._reset_column}')
+            # #model_activations = self._read_words(candidate, stimulus_set, copy_columns=['word_id'],
+            # #                                     reset_column='stimulus_id')
+        model_activations = listen_to(candidate, stimulus_set,reset_column=self._reset_column)
+        #model_activations = self._get_model_activations(candidate)
+        # make sure model_activations and target_assembly have the same order of stimuli
+        assert (model_activations['stimulus_id'].values == self._target_assembly['stimulus_id'].values).all()
+        random_stimulus_ids = np.random.choice(model_activations['stimulus_id'].values, 80, replace=False)
+        # find location of random_stimulus_ids in model_activations.stimulus_id
+        random_stimulus_ids_idx = np.where(np.isin(model_activations['stimulus_id'].values, random_stimulus_ids))[0]
+        model_activation_sample = model_activations[random_stimulus_ids_idx, :]
+        target_assembly_sample = self._target_assembly[random_stimulus_ids_idx, :]
+        assert (model_activation_sample['stimulus_id'].values == target_assembly_sample['stimulus_id'].values).all()
+        _logger.info('Scoring across experiments & atlases')
+        cross_scores = self._cross(target_assembly_sample,
+                                   apply=lambda cross_assembly: self._apply_cross(model_activation_sample, cross_assembly))
+        raw_scores = cross_scores.raw
+        raw_neuroids = apply_aggregate(lambda values: values.mean('split'), raw_scores)
+        # normally we would ceil every single neuroid here. To estimate the strongest ceiling possible (i.e. make it as
+        # hard as possible on the models), we used experiment-overlapping neuroids from as many subjects as possible
+        # which means some neuroids got excluded. Since median(r/c) is the same as median(r)/median(c), we just
+        # normalize the neuroid aggregate by the overall ceiling aggregate.
+        # Additionally, the Pereira data also has voxels from DMN, visual etc. but we care about language here.
+        language_neuroids = raw_neuroids.sel(atlas='language', _apply_raw=False)
+        # score = self._aggregate_no_ceiling(language_neuroids, ceiling=[], subject_column='subject')
+        score = self._aggregate_no_ceiling(language_neuroids, subject_column='subject')
+        return score
 
 class Pereira2023audPassSentenceEncoding(Pereira2023audEncoding):
     def __init__(self, **kwargs):
@@ -3958,6 +4068,7 @@ benchmark_pool = [
     ('Pereira2023aud-sent-sentence-Encoding', Pereira2023audSentSentenceEncoding),
     ('Pereira2023aud-pass-passage-RidgeEncoding', Pereira2023audPassPassageRidgeEncoding),
     ('Pereira2023aud-pass-passage-Encoding', Pereira2023audPassPassageEncoding),
+    ('Pereira2023aud-pass-passage-sample-Encoding', Pereira2023audPassPassageSampleEncoding),
     ('Pereira2023aud-pass-passage-sample-RidgeEncoding', Pereira2023audPassPassageSampleRidgeEncoding),
     ('Pereira2023aud-pass-sentence-RidgeEncoding', Pereira2023audPassSentenceRidgeEncoding),
     ('Pereira2023aud-pass-sentence-Encoding', Pereira2023audPassSentenceEncoding),
@@ -3995,6 +4106,14 @@ benchmark_pool = [
     ('DsParametricfMRI-second-reliable-max-Encoding', DsParametricfMRISecondReliableMaxEncoding),
     ('DsParametricfMRI-second-reliable-min-Encoding', DsParametricfMRISecondReliableMinEncoding),
     ('DsParametricfMRI-second-reliable-rand-Encoding', DsParametricfMRISecondReliableRandEncoding),
+
+    ('DsParametricfMRI-first-reliable-max-RidgeEncoding', DsParametricfMRIFirstReliableMaxRidgeEncoding),
+    ('DsParametricfMRI-first-reliable-min-RidgeEncoding', DsParametricfMRIFirstReliableMinRidgeEncoding),
+    ('DsParametricfMRI-first-reliable-rand-RidgeEncoding', DsParametricfMRIFirstReliableRandRidgeEncoding),
+    #
+    ('DsParametricfMRI-second-reliable-max-RidgeEncoding', DsParametricfMRISecondReliableMaxRidgeEncoding),
+    ('DsParametricfMRI-second-reliable-min-RidgeEncoding', DsParametricfMRISecondReliableMinRidgeEncoding),
+    ('DsParametricfMRI-second-reliable-rand-RidgeEncoding', DsParametricfMRISecondReliableRandRidgeEncoding),
 
     ('DsParametricfMRI-first-all-max-Encoding', DsParametricfMRIFirstAllMaxEncoding),
     ('DsParametricfMRI-first-all-min-Encoding', DsParametricfMRIFirstAllMinEncoding),
