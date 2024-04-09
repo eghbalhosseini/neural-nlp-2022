@@ -60,6 +60,7 @@ if getpass.getuser() == 'eghbalhosseini':
     PEREIRA2018_SAMPLE = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset//'
     DsParametricfMRI_PARENT = '/Users/eghbalhosseini/MyData/neural_nlp_bench/dataset/'
 
+
 elif getpass.getuser() == 'ehoseini':
     ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
@@ -1416,7 +1417,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -1680,7 +1681,7 @@ class DsParametricSinglefMRIEncoding(_DsParametricfMRIBenchmark):
         super(DsParametricSinglefMRIEncoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1747,7 +1748,7 @@ class DsParametricfMRISecondRandEncoding(DsParametricSinglefMRIEncoding):
 # do instead of .1, top 10% of relaiblity in voxel for each subject
 class DsParametricfMRISingleReliableEncoding(DsParametricSinglefMRIEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90, repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat': repetition}]
         # select stimuli that have the stim_group= version
@@ -1820,7 +1821,7 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
         super().__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1887,7 +1888,7 @@ class DsParametricfMRISecondReliableRandRidgeEncoding(DsParametricSinglefMRIRidg
 class DsParametricSinglefMRIAllEncoding(DsParametricSinglefMRIEncoding):
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1964,7 +1965,7 @@ class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
             crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricSinglefMRIStrictEncoding, self).__init__(metric=metric, **kwargs)
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -2048,7 +2049,7 @@ class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
         super(DsParametricSinglefMRIStrictEncoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90, repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat': repetition}]
         # select stimuli that have the stim_group= version
@@ -2121,7 +2122,7 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricSinglefMRIRidgeEncoding, self).__init__(metric=metric, **kwargs)
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -2220,7 +2221,7 @@ class _DsParametricfMRIV2Benchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self, version='max', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_NoThrMask_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -2387,7 +2388,7 @@ class DsParametricRDM(_DsParametricfMRIBenchmark):
 
     def _load_assembly(self, version='max', threshold=90):
         assembly = pd.read_pickle(
-            f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_V2.pkl')
+            f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_NoThrMask_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -2593,7 +2594,7 @@ class _Pereira2023audBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='sent', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_NoThrMask_V2.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -4076,6 +4077,7 @@ benchmark_pool = [
 
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
+
     ('DsParametricfMRI-shared-90-max-encoding', DsParametricfMRISharedMaxEncoding),
     ('DsParametricfMRI-full-90-max-encoding', DsParametricfMRIFullMaxEncoding),
     ('DsParametricfMRI-shared-70-max-encoding', DsParametricfMRIShared70MaxEncoding),
