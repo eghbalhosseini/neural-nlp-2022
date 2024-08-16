@@ -1821,7 +1821,6 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
         super().__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        #
         data_file_name=f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl'
         print(f'reading {data_file_name}\n')
         assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
