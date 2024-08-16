@@ -1356,7 +1356,7 @@ class _DsParametricfMRIBenchmark(Benchmark):
         https://www.nature.com/articles/s41467-018-03068-4
     """
 
-    def __init__(self, identifier, metric,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
+    def __init__(self, identifier, metric,version='DsParametricfMRI_subs_12_language',group='max',threshold=90):
         self._identifier = identifier
         assembly = self._load_assembly(version=version,group=group,threshold=threshold)
         self._target_assembly = assembly
@@ -1416,8 +1416,8 @@ class _DsParametricfMRIBenchmark(Benchmark):
         return cross_scores.mean(['experiment', 'atlas'])
 
     # @load_s3(key='Pereira2018')
-    def _load_assembly(self,version='DsParametricfMRI_subs_7_language',group='max',threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+    def _load_assembly(self,version='DsParametricfMRI_subs_12_language',group='max',threshold=90):
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -1681,7 +1681,7 @@ class DsParametricSinglefMRIEncoding(_DsParametricfMRIBenchmark):
         super(DsParametricSinglefMRIEncoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1748,7 +1748,7 @@ class DsParametricfMRISecondRandEncoding(DsParametricSinglefMRIEncoding):
 # do instead of .1, top 10% of relaiblity in voxel for each subject
 class DsParametricfMRISingleReliableEncoding(DsParametricSinglefMRIEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90, repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat': repetition}]
         # select stimuli that have the stim_group= version
@@ -1821,7 +1821,10 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
         super().__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        #
+        data_file_name=f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl'
+        print(f'reading {data_file_name}\n')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1888,7 +1891,7 @@ class DsParametricfMRISecondReliableRandRidgeEncoding(DsParametricSinglefMRIRidg
 class DsParametricSinglefMRIAllEncoding(DsParametricSinglefMRIEncoding):
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -1965,7 +1968,7 @@ class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
             crossvalidation_kwargs=dict(splits=10, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricSinglefMRIStrictEncoding, self).__init__(metric=metric, **kwargs)
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -2049,7 +2052,7 @@ class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
         super(DsParametricSinglefMRIStrictEncoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90, repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat': repetition}]
         # select stimuli that have the stim_group= version
@@ -2122,7 +2125,7 @@ class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
             crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
         super(DsParametricSinglefMRIRidgeEncoding, self).__init__(metric=metric, **kwargs)
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -2221,7 +2224,7 @@ class _DsParametricfMRIV2Benchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self, version='max', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/DsParametricfMRI_train_language_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -2388,7 +2391,7 @@ class DsParametricRDM(_DsParametricfMRIBenchmark):
 
     def _load_assembly(self, version='max', threshold=90):
         assembly = pd.read_pickle(
-            f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_NoThrMask_V2.pkl')
+            f'{DsParametricfMRI_PARENT}/DsParametricfMRI_rsa_train_language_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -2594,7 +2597,7 @@ class _Pereira2023audBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='sent', threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_NoThrMask_V2.pkl')
+        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/Pereira2023aud_{version}_train_language_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (True, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -4081,10 +4084,10 @@ benchmark_pool = [
     ('DsParametricfMRI-shared-90-max-encoding', DsParametricfMRISharedMaxEncoding),
     ('DsParametricfMRI-full-90-max-encoding', DsParametricfMRIFullMaxEncoding),
     ('DsParametricfMRI-shared-70-max-encoding', DsParametricfMRIShared70MaxEncoding),
-    ('DsParametricfMRI-shared-min-encoding', DsParametricfMRISharedMinEncoding),
+    ('DsParametricfMRI-shared-90-min-encoding', DsParametricfMRISharedMinEncoding),
     ('DsParametricfMRI-full-90-min-encoding', DsParametricfMRIFullMinEncoding),
     ('DsParametricfMRI-shared-70-min-encoding', DsParametricfMRIShared70MinEncoding),
-    ('DsParametricfMRI-shared-rand-encoding', DsParametricfMRISharedRandEncoding),
+    ('DsParametricfMRI-shared-90-rand-encoding', DsParametricfMRISharedRandEncoding),
     ('DsParametricfMRI-full-90-rand-encoding', DsParametricfMRIFullRandEncoding),
     ('DsParametricfMRI-shared-70-rand-encoding', DsParametricfMRIShared70RandEncoding),
     ('DsParametricfMRI-shared-all-encoding', DsParametricfMRISharedAllEncoding),
@@ -4093,43 +4096,43 @@ benchmark_pool = [
     ('DsParametricfMRI-shared-min-RidgeEncoding', DsParametricfMRISharedMinRidgeEncoding),
     ('DsParametricfMRI-shared-rand-RidgeEncoding', DsParametricfMRISharedRandRidgeEncoding),
 
-    ('DsParametricfMRI-first-max-Encoding', DsParametricfMRIFirstMaxEncoding),
-    ('DsParametricfMRI-first-min-Encoding', DsParametricfMRIFirstMinEncoding),
-    ('DsParametricfMRI-first-rand-Encoding', DsParametricfMRIFirstRandEncoding),
+    ('DsParametricfMRI-first-max-Encoding_aug2024', DsParametricfMRIFirstMaxEncoding),
+    ('DsParametricfMRI-first-min-Encoding_aug2024', DsParametricfMRIFirstMinEncoding),
+    ('DsParametricfMRI-first-rand-Encoding_aug2024', DsParametricfMRIFirstRandEncoding),
 
-    ('DsParametricfMRI-second-max-Encoding', DsParametricfMRISecondMaxEncoding),
-    ('DsParametricfMRI-second-min-Encoding', DsParametricfMRISecondMinEncoding),
-    ('DsParametricfMRI-second-rand-Encoding', DsParametricfMRISecondRandEncoding),
+    ('DsParametricfMRI-second-max-Encoding_aug2024', DsParametricfMRISecondMaxEncoding),
+    ('DsParametricfMRI-second-min-Encoding_aug2024', DsParametricfMRISecondMinEncoding),
+    ('DsParametricfMRI-second-rand-Encoding_aug2024', DsParametricfMRISecondRandEncoding),
 
-    ('DsParametricfMRI-first-reliable-max-Encoding', DsParametricfMRIFirstReliableMaxEncoding),
-    ('DsParametricfMRI-first-reliable-min-Encoding', DsParametricfMRIFirstReliableMinEncoding),
-    ('DsParametricfMRI-first-reliable-rand-Encoding', DsParametricfMRIFirstReliableRandEncoding),
+    ('DsParametricfMRI-first-reliable-max-Encoding_aug2024', DsParametricfMRIFirstReliableMaxEncoding),
+    ('DsParametricfMRI-first-reliable-min-Encoding_aug2024', DsParametricfMRIFirstReliableMinEncoding),
+    ('DsParametricfMRI-first-reliable-rand-Encoding_aug2024', DsParametricfMRIFirstReliableRandEncoding),
 
-    ('DsParametricfMRI-second-reliable-max-Encoding', DsParametricfMRISecondReliableMaxEncoding),
-    ('DsParametricfMRI-second-reliable-min-Encoding', DsParametricfMRISecondReliableMinEncoding),
-    ('DsParametricfMRI-second-reliable-rand-Encoding', DsParametricfMRISecondReliableRandEncoding),
+    ('DsParametricfMRI-second-reliable-max-Encoding_aug2024', DsParametricfMRISecondReliableMaxEncoding),
+    ('DsParametricfMRI-second-reliable-min-Encoding_aug2024', DsParametricfMRISecondReliableMinEncoding),
+    ('DsParametricfMRI-second-reliable-rand-Encoding_aug2024', DsParametricfMRISecondReliableRandEncoding),
 
-    ('DsParametricfMRI-first-reliable-max-RidgeEncoding', DsParametricfMRIFirstReliableMaxRidgeEncoding),
-    ('DsParametricfMRI-first-reliable-min-RidgeEncoding', DsParametricfMRIFirstReliableMinRidgeEncoding),
-    ('DsParametricfMRI-first-reliable-rand-RidgeEncoding', DsParametricfMRIFirstReliableRandRidgeEncoding),
+    ('DsParametricfMRI-first-reliable-max-RidgeEncoding_aug2024', DsParametricfMRIFirstReliableMaxRidgeEncoding),
+    ('DsParametricfMRI-first-reliable-min-RidgeEncoding_aug2024', DsParametricfMRIFirstReliableMinRidgeEncoding),
+    ('DsParametricfMRI-first-reliable-rand-RidgeEncoding_aug2024', DsParametricfMRIFirstReliableRandRidgeEncoding),
     #
-    ('DsParametricfMRI-second-reliable-max-RidgeEncoding', DsParametricfMRISecondReliableMaxRidgeEncoding),
-    ('DsParametricfMRI-second-reliable-min-RidgeEncoding', DsParametricfMRISecondReliableMinRidgeEncoding),
-    ('DsParametricfMRI-second-reliable-rand-RidgeEncoding', DsParametricfMRISecondReliableRandRidgeEncoding),
+    ('DsParametricfMRI-second-reliable-max-RidgeEncoding_aug2024', DsParametricfMRISecondReliableMaxRidgeEncoding),
+    ('DsParametricfMRI-second-reliable-min-RidgeEncoding_aug2024', DsParametricfMRISecondReliableMinRidgeEncoding),
+    ('DsParametricfMRI-second-reliable-rand-RidgeEncoding_aug2024', DsParametricfMRISecondReliableRandRidgeEncoding),
 
-    ('DsParametricfMRI-first-all-max-Encoding', DsParametricfMRIFirstAllMaxEncoding),
-    ('DsParametricfMRI-first-all-min-Encoding', DsParametricfMRIFirstAllMinEncoding),
-    ('DsParametricfMRI-first-all-rand-Encoding', DsParametricfMRIFirstAllRandEncoding),
+    ('DsParametricfMRI-first-all-max-Encoding_aug2024', DsParametricfMRIFirstAllMaxEncoding),
+    ('DsParametricfMRI-first-all-min-Encoding_aug2024', DsParametricfMRIFirstAllMinEncoding),
+    ('DsParametricfMRI-first-all-rand-Encoding_aug2024', DsParametricfMRIFirstAllRandEncoding),
 
-    ('DsParametricfMRI-second-all-max-Encoding', DsParametricfMRISecondAllMaxEncoding),
-    ('DsParametricfMRI-second-all-min-Encoding', DsParametricfMRISecondAllMinEncoding),
-    ('DsParametricfMRI-second-all-rand-Encoding', DsParametricfMRISecondAllRandEncoding),
+    ('DsParametricfMRI-second-all-max-Encoding_aug2024', DsParametricfMRISecondAllMaxEncoding),
+    ('DsParametricfMRI-second-all-min-Encoding_aug2024', DsParametricfMRISecondAllMinEncoding),
+    ('DsParametricfMRI-second-all-rand-Encoding_aug2024', DsParametricfMRISecondAllRandEncoding),
 
-    ('DsParametricfMRI-80-first-max-Encoding', DsParametricfMRI80FirstMaxEncoding),
-    ('DsParametricfMRI-80-first-min-Encoding', DsParametricfMRI80FirstMinEncoding),
-    ('DsParametricfMRI-80-first-rand-Encoding', DsParametricfMRI80FirstRandEncoding),
+    ('DsParametricfMRI-80-first-max-Encoding_aug2024', DsParametricfMRI80FirstMaxEncoding),
+    ('DsParametricfMRI-80-first-min-Encoding_aug2024', DsParametricfMRI80FirstMinEncoding),
+    ('DsParametricfMRI-80-first-rand-Encoding_aug2024', DsParametricfMRI80FirstRandEncoding),
 
-    ('DsParametricfMRI-80-second-max-Encoding', DsParametricfMRI80SecondMaxEncoding),
+    ('DsParametricfMRI-80-second-max-Encoding_aug2024', DsParametricfMRI80SecondMaxEncoding),
     ('DsParametricfMRI-80-second-min-Encoding', DsParametricfMRI80SecondMinEncoding),
     ('DsParametricfMRI-80-second-rand-Encoding', DsParametricfMRI80SecondRandEncoding),
 
@@ -4142,13 +4145,13 @@ benchmark_pool = [
     ('DsParametricfMRI-second-min-StrictEncoding', DsParametricfMRISecondMinStrictEncoding),
     ('DsParametricfMRI-second-rand-StrictEncoding', DsParametricfMRISecondRandStrictEncoding),
 
-    ('DsParametricfMRI-first-max-RidgeEncoding', DsParametricfMRIFirstMaxRidgeEncoding),
-    ('DsParametricfMRI-first-min-RidgeEncoding', DsParametricfMRIFirstMinRidgeEncoding),
-    ('DsParametricfMRI-first-rand-RidgeEncoding', DsParametricfMRIFirstRandRidgeEncoding),
+    ('DsParametricfMRI-first-max-RidgeEncoding_aug2024', DsParametricfMRIFirstMaxRidgeEncoding),
+    ('DsParametricfMRI-first-min-RidgeEncoding_aug2024', DsParametricfMRIFirstMinRidgeEncoding),
+    ('DsParametricfMRI-first-rand-RidgeEncoding_aug2024', DsParametricfMRIFirstRandRidgeEncoding),
 
-    ('DsParametricfMRI-second-max-RidgeEncoding', DsParametricfMRISecondMaxRidgeEncoding),
-    ('DsParametricfMRI-second-min-RidgeEncoding', DsParametricfMRISecondMinRidgeEncoding),
-    ('DsParametricfMRI-second-rand-RidgeEncoding', DsParametricfMRISecondRandRidgeEncoding),
+    ('DsParametricfMRI-second-max-RidgeEncoding_aug2024', DsParametricfMRISecondMaxRidgeEncoding),
+    ('DsParametricfMRI-second-min-RidgeEncoding_aug2024', DsParametricfMRISecondMinRidgeEncoding),
+    ('DsParametricfMRI-second-rand-RidgeEncoding_aug2024', DsParametricfMRISecondRandRidgeEncoding),
 
     # ('DsParametricfMRI_v1-max-RidgeEncoding', DsParametricfMRIMaxV1RidgeEncoding),
     # ('DsParametricfMRI_v1-min-RidgeEncoding', DsParametricfMRIMinV1RidgeEncoding),

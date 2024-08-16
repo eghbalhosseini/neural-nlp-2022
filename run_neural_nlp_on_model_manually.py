@@ -28,8 +28,8 @@ elif user=='ehoseini':
 #                 ('gpt2', 'encoder.h.11')]
 
 if __name__ =='__main__':
-    benchmark_name = 'DsParametricfMRI-first-reliable-rand-RidgeEncoding'
-    model_name = "roberta-base"
+    benchmark_name = 'DsParametricfMRI-first-reliable-rand-RidgeEncoding_aug2024'
+    model_name = "gpt2"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name
