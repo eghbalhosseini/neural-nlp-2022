@@ -1630,6 +1630,17 @@ class DsParametricfMRISharedRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self, version='DsParametricfMRI_subs_7_language', group='random', threshold=90):
         return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='random', threshold=90)
 
+class DsParametricfMRIFullMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='max', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='max', threshold=90)
+
+class DsParametricfMRIFullMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='min', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='min', threshold=90)
+class DsParametricfMRIFullRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='random', threshold=90):
+        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='random', threshold=90)
+
 
 class DsParametricfMRIMaxV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self,version='max',threshold=80):
@@ -4085,20 +4096,25 @@ benchmark_pool = [
     ('Pereira2023aud-sent-passage-RidgeEncoding', Pereira2023audSentPassageRidgeEncoding),
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
 
-    ('DsParametricfMRI-shared-90-max-encoding', DsParametricfMRISharedMaxEncoding),
+    ('DsParametricfMRI-shared-90-max-encoding_aug2024', DsParametricfMRISharedMaxEncoding),
     ('DsParametricfMRI-full-90-max-encoding_aug2024', DsParametricfMRIFullMaxEncoding),
-    ('DsParametricfMRI-shared-70-max-encoding', DsParametricfMRIShared70MaxEncoding),
-    ('DsParametricfMRI-shared-90-min-encoding', DsParametricfMRISharedMinEncoding),
+    ('DsParametricfMRI-shared-70-max-encoding_aug2024', DsParametricfMRIShared70MaxEncoding),
+    ('DsParametricfMRI-shared-90-min-encoding_aug2024', DsParametricfMRISharedMinEncoding),
     ('DsParametricfMRI-full-90-min-encoding_aug2024', DsParametricfMRIFullMinEncoding),
-    ('DsParametricfMRI-shared-70-min-encoding', DsParametricfMRIShared70MinEncoding),
-    ('DsParametricfMRI-shared-90-rand-encoding', DsParametricfMRISharedRandEncoding),
+    ('DsParametricfMRI-shared-70-min-encoding_aug2024', DsParametricfMRIShared70MinEncoding),
+    ('DsParametricfMRI-shared-90-rand-encoding_aug2024', DsParametricfMRISharedRandEncoding),
     ('DsParametricfMRI-full-90-rand-encoding_aug2024', DsParametricfMRIFullRandEncoding),
-    ('DsParametricfMRI-shared-70-rand-encoding', DsParametricfMRIShared70RandEncoding),
-    ('DsParametricfMRI-shared-all-encoding', DsParametricfMRISharedAllEncoding),
+    ('DsParametricfMRI-shared-70-rand-encoding_aug2024', DsParametricfMRIShared70RandEncoding),
+    ('DsParametricfMRI-shared-all-encoding_aug2024', DsParametricfMRISharedAllEncoding),
 
-    ('DsParametricfMRI-shared-max-RidgeEncoding', DsParametricfMRISharedMaxRidgeEncoding),
-    ('DsParametricfMRI-shared-min-RidgeEncoding', DsParametricfMRISharedMinRidgeEncoding),
-    ('DsParametricfMRI-shared-rand-RidgeEncoding', DsParametricfMRISharedRandRidgeEncoding),
+    ('DsParametricfMRI-shared-90-max-RidgeEncoding_aug2024', DsParametricfMRISharedMaxRidgeEncoding),
+    ('DsParametricfMRI-shared-90-min-RidgeEncoding_aug2024', DsParametricfMRISharedMinRidgeEncoding),
+    ('DsParametricfMRI-shared-90-rand-RidgeEncoding_aug2024', DsParametricfMRISharedRandRidgeEncoding),
+
+    ('DsParametricfMRI-shared-90-max-RidgeEncoding_aug2024', DsParametricfMRIFullMaxRidgeEncoding),
+    ('DsParametricfMRI-shared-90-min-RidgeEncoding_aug2024', DsParametricfMRIFullMinRidgeEncoding),
+    ('DsParametricfMRI-shared-90-rand-RidgeEncoding_aug2024', DsParametricfMRIFullRandRidgeEncoding),
+
 
     ('DsParametricfMRI-first-max-Encoding_aug2024', DsParametricfMRIFirstMaxEncoding),
     ('DsParametricfMRI-first-min-Encoding_aug2024', DsParametricfMRIFirstMinEncoding),
