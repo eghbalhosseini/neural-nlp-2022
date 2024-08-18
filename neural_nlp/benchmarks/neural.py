@@ -4111,9 +4111,9 @@ benchmark_pool = [
     ('DsParametricfMRI-shared-90-min-RidgeEncoding_aug2024', DsParametricfMRISharedMinRidgeEncoding),
     ('DsParametricfMRI-shared-90-rand-RidgeEncoding_aug2024', DsParametricfMRISharedRandRidgeEncoding),
 
-    ('DsParametricfMRI-shared-90-max-RidgeEncoding_aug2024', DsParametricfMRIFullMaxRidgeEncoding),
-    ('DsParametricfMRI-shared-90-min-RidgeEncoding_aug2024', DsParametricfMRIFullMinRidgeEncoding),
-    ('DsParametricfMRI-shared-90-rand-RidgeEncoding_aug2024', DsParametricfMRIFullRandRidgeEncoding),
+    ('DsParametricfMRI-full-90-max-RidgeEncoding_aug2024', DsParametricfMRIFullMaxRidgeEncoding),
+    ('DsParametricfMRI-full-90-min-RidgeEncoding_aug2024', DsParametricfMRIFullMinRidgeEncoding),
+    ('DsParametricfMRI-full-90-rand-RidgeEncoding_aug2024', DsParametricfMRIFullRandRidgeEncoding),
 
 
     ('DsParametricfMRI-first-max-Encoding_aug2024', DsParametricfMRIFirstMaxEncoding),
