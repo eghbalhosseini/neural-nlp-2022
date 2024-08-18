@@ -1417,7 +1417,9 @@ class _DsParametricfMRIBenchmark(Benchmark):
 
     # @load_s3(key='Pereira2018')
     def _load_assembly(self,version='DsParametricfMRI_subs_12_language',group='max',threshold=90):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
+        data_file_name = f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl'
+        print(f'reading {data_file_name}\n')
+        assembly = pd.read_pickle(data_file_name)
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
         vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
@@ -1681,7 +1683,10 @@ class DsParametricSinglefMRIEncoding(_DsParametricfMRIBenchmark):
         super(DsParametricSinglefMRIEncoding, self).__init__(metric=metric, **kwargs)
 
     def _load_assembly(self,version='DsParametricfMRI_rsa_subs_12_language',group='max',threshold=90,repetition=0):
-        assembly = pd.read_pickle(f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl')
+
+        data_file_name=f'{DsParametricfMRI_PARENT}/{version}_top_{threshold}_reliability_random_analyzed_aug2024.pkl'
+        print(f'reading {data_file_name}\n')
+        assembly = pd.read_pickle(data_file_name)
         # select first repetion
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
@@ -4081,13 +4086,13 @@ benchmark_pool = [
     ('Pereira2023aud-sent-passage-Encoding', Pereira2023audSentPassageEncoding),
 
     ('DsParametricfMRI-shared-90-max-encoding', DsParametricfMRISharedMaxEncoding),
-    ('DsParametricfMRI-full-90-max-encoding', DsParametricfMRIFullMaxEncoding),
+    ('DsParametricfMRI-full-90-max-encoding_aug2024', DsParametricfMRIFullMaxEncoding),
     ('DsParametricfMRI-shared-70-max-encoding', DsParametricfMRIShared70MaxEncoding),
     ('DsParametricfMRI-shared-90-min-encoding', DsParametricfMRISharedMinEncoding),
-    ('DsParametricfMRI-full-90-min-encoding', DsParametricfMRIFullMinEncoding),
+    ('DsParametricfMRI-full-90-min-encoding_aug2024', DsParametricfMRIFullMinEncoding),
     ('DsParametricfMRI-shared-70-min-encoding', DsParametricfMRIShared70MinEncoding),
     ('DsParametricfMRI-shared-90-rand-encoding', DsParametricfMRISharedRandEncoding),
-    ('DsParametricfMRI-full-90-rand-encoding', DsParametricfMRIFullRandEncoding),
+    ('DsParametricfMRI-full-90-rand-encoding_aug2024', DsParametricfMRIFullRandEncoding),
     ('DsParametricfMRI-shared-70-rand-encoding', DsParametricfMRIShared70RandEncoding),
     ('DsParametricfMRI-shared-all-encoding', DsParametricfMRISharedAllEncoding),
 
@@ -4132,8 +4137,8 @@ benchmark_pool = [
     ('DsParametricfMRI-80-first-rand-Encoding_aug2024', DsParametricfMRI80FirstRandEncoding),
 
     ('DsParametricfMRI-80-second-max-Encoding_aug2024', DsParametricfMRI80SecondMaxEncoding),
-    ('DsParametricfMRI-80-second-min-Encoding', DsParametricfMRI80SecondMinEncoding),
-    ('DsParametricfMRI-80-second-rand-Encoding', DsParametricfMRI80SecondRandEncoding),
+    ('DsParametricfMRI-80-second-min-Encoding_aug2024', DsParametricfMRI80SecondMinEncoding),
+    ('DsParametricfMRI-80-second-rand-Encoding_aug2024', DsParametricfMRI80SecondRandEncoding),
 
 
     ('DsParametricfMRI-first-max-StrictEncoding', DsParametricfMRIFirstMaxStrictEncoding),
