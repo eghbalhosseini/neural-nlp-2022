@@ -1702,7 +1702,7 @@ class DsParametricSinglefMRIEncoding(_DsParametricfMRIBenchmark):
         assembly = assembly[{'repeat':repetition}]
         # select stimuli that have the stim_group= version
         vox_reliability = {'language': (False, .95), 'auditory': (False, .95), 'visual': (False, .95)}
-        vox_corr = {'language': (True, .1), 'auditory': (False, .1), 'visual': (False, .1)}
+        vox_corr = {'language': (False, .1), 'auditory': (False, .1), 'visual': (False, .1)}
         if group=='all':
             pass
         else:
