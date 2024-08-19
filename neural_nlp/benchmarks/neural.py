@@ -1632,14 +1632,14 @@ class DsParametricfMRISharedRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
 
 class DsParametricfMRIFullMaxRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='max', threshold=90):
-        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='max', threshold=90)
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language', group='max', threshold=90)
 
 class DsParametricfMRIFullMinRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='min', threshold=90):
-        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='min', threshold=90)
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language', group='min', threshold=90)
 class DsParametricfMRIFullRandRidgeEncoding(DsParametricfMRIRidgeEncoding):
     def _load_assembly(self, version='DsParametricfMRI_subs_12_language', group='random', threshold=90):
-        return super()._load_assembly(version='DsParametricfMRI_subs_7_language', group='random', threshold=90)
+        return super()._load_assembly(version='DsParametricfMRI_subs_12_language', group='random', threshold=90)
 
 
 class DsParametricfMRIMaxV2RidgeEncoding(DsParametricfMRIRidgeEncoding):
