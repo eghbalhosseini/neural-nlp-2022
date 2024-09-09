@@ -1953,7 +1953,6 @@ class DsParametricSinglefMRIAllEncoding(DsParametricSinglefMRIEncoding):
 class DsParametricfMRIFirstAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=0)
-
 class DsParametricfMRIFirstAllMinEncoding(DsParametricSinglefMRIAllEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='min', threshold=90,repetition=0)
@@ -1972,6 +1971,55 @@ class DsParametricfMRISecondAllRandEncoding(DsParametricSinglefMRIAllEncoding):
 class DsParametricfMRISecondAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+
+# visual version of rep1 and rep 2 encoding
+class DsParametricfMRIFirstAllMaxVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=0)
+class DsParametricfMRIFirstAllMinVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='min', threshold=90,repetition=0)
+class DsParametricfMRIFirstAllRandVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='random', threshold=90,repetition=0)
+class DsParametricfMRISecondAllMaxVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMinVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='min', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='min', threshold=90,repetition=1)
+class DsParametricfMRISecondAllRandVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='random', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='random', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMaxVisualEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_visual', group='max', threshold=90,repetition=1)
+
+# auditory version of rep1 and rep 2 encoding
+# visual version of rep1 and rep 2 encoding
+class DsParametricfMRIFirstAllMaxAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=0)
+class DsParametricfMRIFirstAllMinAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='min', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='min', threshold=90,repetition=0)
+class DsParametricfMRIFirstAllRandAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='random', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='random', threshold=90,repetition=0)
+class DsParametricfMRISecondAllMaxAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMinAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='min', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='min', threshold=90,repetition=1)
+class DsParametricfMRISecondAllRandAuditoryEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='random', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='random', threshold=90,repetition=1)
+class DsParametricfMRISecondAllMaxAuditorylEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_auditory', group='max', threshold=90,repetition=1)
+
+
 
 class DsParametricSinglefMRIStrictEncoding(_DsParametricfMRIBenchmark):
     """
@@ -4149,6 +4197,23 @@ benchmark_pool = [
     ('DsParametricfMRI-second-all-max-Encoding_sep2024', DsParametricfMRISecondAllMaxEncoding),
     ('DsParametricfMRI-second-all-min-Encoding_sep2024', DsParametricfMRISecondAllMinEncoding),
     ('DsParametricfMRI-second-all-rand-Encoding_sep2024', DsParametricfMRISecondAllRandEncoding),
+
+    # visual
+    ('DsParametricfMRI-first-all-max-visual-Encoding_sep2024', DsParametricfMRIFirstAllMaxVisualEncoding),
+    ('DsParametricfMRI-first-all-min-visual-Encoding_sep2024', DsParametricfMRIFirstAllMinVisualEncoding),
+    ('DsParametricfMRI-first-all-rand-visual-Encoding_sep2024', DsParametricfMRIFirstAllRandVisualEncoding),
+
+    ('DsParametricfMRI-second-all-max-visual-Encoding_sep2024', DsParametricfMRISecondAllMaxVisualEncoding),
+    ('DsParametricfMRI-second-all-min-visual-Encoding_sep2024', DsParametricfMRISecondAllMinVisualEncoding),
+    ('DsParametricfMRI-second-all-rand-visual-Encoding_sep2024', DsParametricfMRISecondAllRandVisualEncoding),
+    # auditory
+    ('DsParametricfMRI-first-all-max-auditory-Encoding_sep2024', DsParametricfMRIFirstAllMaxAuditoryEncoding),
+    ('DsParametricfMRI-first-all-min-auditory-Encoding_sep2024', DsParametricfMRIFirstAllMinAuditoryEncoding),
+    ('DsParametricfMRI-first-all-rand-auditory-Encoding_sep2024', DsParametricfMRIFirstAllRandAuditoryEncoding),
+
+    ('DsParametricfMRI-second-all-max-auditory-Encoding_sep2024', DsParametricfMRISecondAllMaxAuditoryEncoding),
+    ('DsParametricfMRI-second-all-min-auditory-Encoding_sep2024', DsParametricfMRISecondAllMinAuditoryEncoding),
+    ('DsParametricfMRI-second-all-rand-auditory-Encoding_sep2024', DsParametricfMRISecondAllRandAuditoryEncoding),
 
     ('DsParametricfMRI-80-first-max-Encoding_sep2024', DsParametricfMRI80FirstMaxEncoding),
     ('DsParametricfMRI-80-first-min-Encoding_sep2024', DsParametricfMRI80FirstMinEncoding),
