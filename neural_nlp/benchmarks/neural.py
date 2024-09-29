@@ -1202,6 +1202,61 @@ class ANNSet1fMRIBestV3Encoding(_ANNSet1fMRIBenchmark):
         ceiling_val=super(ANNSet1fMRIBestV3Encoding, self).ceiling
         return ceiling_val
 
+class ANNSet1fMRIBestReliableEncoding(_ANNSet1fMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(ANNSet1fMRIBestReliableEncoding, self).__init__(metric=metric, version='best', ** kwargs)
+
+    def _load_assembly(self, version):
+        if version == 'base':
+            # raise ValueError('No base version for ANNSet1fMRIBestV3Encoding')
+            NotImplementedError('No base version for ANNSet1fMRIBestV3Encoding')
+
+            #assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+
+        elif version == 'wordForm':
+            #assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
+            NotImplementedError('No base version for ANNSet1fMRIBestV3Encoding')
+        elif version == 'best':
+            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNsent_best_subs_8_language_top_90_V3.pkl')
+
+        # save a.sentence and b.sentence  as csv file with 2 columns a.sentence, b.sentence
+        grp_q=[]
+        for grp_id, grp in assembly.groupby('subject'):
+            ind_q = (grp['repetition_corr'] > grp['repetition_corr'].quantile(.9)).values
+            grp_q.append(grp[:, ind_q])
+            # select grp_id in x1_raw
+        assembly = xr.concat(grp_q, dim='neuroid')
+        assembly.attrs['identifier']='ANNSet1_fMRI.best.language_top_90_reliable'
+        assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI'
+        # drop the period in the end of sentences if they exist in the end
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+
+        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
+        assembly.attrs['stimulus_set'] = stimulus_set
+
+        return assembly
+
+    @property
+    def ceiling(self):
+        #ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        ceiling_val=super(ANNSet1fMRIBestReliableEncoding, self).ceiling
+        return ceiling_val
+
 class _ANNSet1fMRISentenceBenchmark(Benchmark):
     """
     data source:
@@ -4312,6 +4367,7 @@ benchmark_pool = [
     ('ANNSet1fMRI-wordForm-encoding',ANNSet1fMRIEncoding_V2),
     ('ANNSet1fMRI-best-encoding', ANNSet1fMRIBestEncoding),
     ('ANNSet1fMRI-v3-best-encoding', ANNSet1fMRIBestV3Encoding),
+    ('ANNSet1fMRI-best-reliable-encoding', ANNSet1fMRIBestReliableEncoding),
     ('ANNSet1fMRISentence-encoding', ANNSet1fMRISentenceEncoding),
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
