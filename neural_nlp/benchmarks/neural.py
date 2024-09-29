@@ -62,7 +62,8 @@ if getpass.getuser() == 'eghbalhosseini':
 
 
 elif getpass.getuser() == 'ehoseini':
-    ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
+    ANNfMRI_PARENT = '/nese/mit/group/evlab/u/ehoseini/MyData/fmri_DNN/outputs/'
+    #ANNfMRI_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     ANNECOG_PARENT = '/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     PEREIRA2018_SAMPLE='/om2/user/ehoseini/MyData/neural_nlp_bench/dataset/'
     DsParametricfMRI_PARENT = '/nese/mit/group/evlab/u/ehoseini/MyData/fmri_DNN/outputs/'
