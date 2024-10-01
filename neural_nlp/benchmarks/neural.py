@@ -1258,6 +1258,55 @@ class ANNSet1fMRIBestReliableEncoding(_ANNSet1fMRIBenchmark):
         ceiling_val=super(ANNSet1fMRIBestReliableEncoding, self).ceiling
         return ceiling_val
 
+class ANNSet1fMRIBestFullEncoding(_ANNSet1fMRIBenchmark):
+    """
+    data source:
+    """
+
+    def __init__(self, **kwargs):
+        metric = CrossRegressedCorrelation(
+            regression=linear_regression(xarray_kwargs=dict(stimulus_coord='stimulus_id')),
+            correlation=pearsonr_correlation(xarray_kwargs=dict(correlation_coord='stimulus_id')),
+            crossvalidation_kwargs=dict(splits=5, kfold=True, split_coord='stimulus_id', stratification_coord=None))
+        super(ANNSet1fMRIBestFullEncoding, self).__init__(metric=metric, version='best', ** kwargs)
+
+    def _load_assembly(self, version):
+        if version == 'base':
+            # raise ValueError('No base version for ANNSet1fMRIBestV3Encoding')
+            NotImplementedError('No base version for ANNSet1fMRIBestV3Encoding')
+
+            #assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90.pkl')
+
+        elif version == 'wordForm':
+            #assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI.train.language_top_90_wordForm.pkl')
+            NotImplementedError('No base version for ANNSet1fMRIBestV3Encoding')
+        elif version == 'best':
+            assembly = pd.read_pickle(f'{ANNfMRI_PARENT}/ANNsent_best_subs_8_language_top_90_V3.pkl')
+
+        # save a.sentence and b.sentence  as csv file with 2 columns a.sentence, b.sentence
+        assembly.attrs['identifier']='ANNSet1_fMRI.best.language_top_90_full'
+        assembly.attrs['stimuli_group'] = f'ANNSet1_fMRI'
+        # drop the period in the end of sentences if they exist in the end
+
+        sentences = assembly['stimulus'].str.replace(r'\.$', '', regex=True)
+        stimulus_set = StimulusSet({'sentence': sentences.values,
+                                    'stimulus_num': assembly['stimulus_num'].values,
+                                    'stimulus_id': assembly['stimulus_id'].values,
+                                    'stim_name': assembly['stim_name'].values,
+                                    'stumulus': sentences.values,
+                                    'sentence_id': assembly['stimulus_id'].values})
+
+        stimulus_set.name = f"{assembly.attrs['stimuli_group']}"
+        assembly.attrs['stimulus_set'] = stimulus_set
+
+        return assembly
+
+    @property
+    def ceiling(self):
+        #ceiling_val=pd.read_pickle(f'{ANNfMRI_PARENT}/ANNSet1_fMRI-train-language_top_90-linear_ceiling.pkl')
+        ceiling_val=super(ANNSet1fMRIBestFullEncoding, self).ceiling
+        return ceiling_val
+
 class _ANNSet1fMRISentenceBenchmark(Benchmark):
     """
     data source:
@@ -1596,9 +1645,6 @@ class _DsParametricfMRIBenchmark(Benchmark):
 #     def _average_cross_scores(self, cross_scores):
 #         return super(_DsParametricSujectwise, self)._average_cross_scores(cross_scores).median('subject')
 
-
-
-
 class DsParametricfMRIEncoding(_DsParametricfMRIBenchmark):
     """
     data source:
@@ -1879,8 +1925,6 @@ class DsParametricfMRISecondReliableRandEncoding(DsParametricfMRISingleReliableE
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='random', threshold=90,repetition=1)
 
 
-
-
 class DsParametricSinglefMRIRidgeEncoding(_DsParametricfMRIBenchmark):
     """
     data source:
@@ -2073,6 +2117,15 @@ class DsParametricfMRISecondAllRandEncoding(DsParametricSinglefMRIAllEncoding):
 class DsParametricfMRISecondAllMaxEncoding(DsParametricSinglefMRIAllEncoding):
     def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1):
         return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='max', threshold=90,repetition=1)
+
+# do for all voxels
+class DsParametricfMRIFirstAllAllEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='all', threshold=90,repetition=0):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='all', threshold=90,repetition=0)
+
+class DsParametricfMRISecondAllAllEncoding(DsParametricSinglefMRIAllEncoding):
+    def _load_assembly(self, version='DsParametricfMRI_rsa_subs_12_language', group='all', threshold=90,repetition=1):
+        return super()._load_assembly(version='DsParametricfMRI_rsa_subs_12_language', group='all', threshold=90,repetition=1)
 
 # visual version of rep1 and rep 2 encoding
 class DsParametricfMRIFirstAllMaxVisualEncoding(DsParametricSinglefMRIAllEncoding):
@@ -4299,6 +4352,9 @@ benchmark_pool = [
     ('DsParametricfMRI-second-all-max-Encoding_sep2024', DsParametricfMRISecondAllMaxEncoding),
     ('DsParametricfMRI-second-all-min-Encoding_sep2024', DsParametricfMRISecondAllMinEncoding),
     ('DsParametricfMRI-second-all-rand-Encoding_sep2024', DsParametricfMRISecondAllRandEncoding),
+    # all condition
+    ('DsParametricfMRI-first-all-all-Encoding_sep2024', DsParametricfMRIFirstAllAllEncoding),
+    ('DsParametricfMRI-second-all-all-Encoding_sep2024', DsParametricfMRISecondAllAllEncoding),
 
     # visual
     ('DsParametricfMRI-first-all-max-visual-Encoding_sep2024', DsParametricfMRIFirstAllMaxVisualEncoding),
@@ -4369,6 +4425,7 @@ benchmark_pool = [
     ('ANNSet1fMRI-best-encoding', ANNSet1fMRIBestEncoding),
     ('ANNSet1fMRI-v3-best-encoding', ANNSet1fMRIBestV3Encoding),
     ('ANNSet1fMRI-best-reliable-encoding', ANNSet1fMRIBestReliableEncoding),
+    ('ANNSet1fMRI-best-full-encoding', ANNSet1fMRIBestFullEncoding),
     ('ANNSet1fMRISentence-encoding', ANNSet1fMRISentenceEncoding),
     ('ANNSet1fMRISentence-wordForm-encoding', ANNSet1fMRISentenceEncoding_V2),
     ('ANNSet1ECoG-encoding', ANNSet1ECoGEncoding),
