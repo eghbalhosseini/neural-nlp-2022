@@ -371,6 +371,8 @@ class FewSubjectExtrapolation:
                     subject_assembly = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] == subject).values)
                     # select data from other subjects
                     other_subject_data = sub_assembly.sel(neuroid=(sub_assembly[self.subject_column] != subject).values)
+                    # make sure the subject_assemblry is not in other_subject_data
+                    assert not np.unique(subject_assembly.subject) in np.unique(other_subject_data.subject.values)
                     # run subject as a neural candidate
                     score=metric(other_subject_data, subject_assembly)
                     assert not np.all(np.isnan(score.raw.values))
