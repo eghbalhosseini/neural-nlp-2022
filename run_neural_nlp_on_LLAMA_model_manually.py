@@ -1,4 +1,4 @@
-from neural_nlp.models.implementations import _PytorchTransformerWrapper, word_last, transformer_configurations,model_pool
+from neural_nlp.models.implementations import _PytorchTransformerWrapper, word_last
 from neural_nlp import score as score_function
 import getpass
 
@@ -14,6 +14,13 @@ from accelerate import init_empty_weights, Accelerator
 from accelerate import load_checkpoint_and_dispatch,infer_auto_device_map
 from transformers import LlamaForCausalLM, LlamaTokenizer,LlamaConfig
 
+import torch
+if torch.cuda.is_available():
+    print(f"PyTorch is using {torch.cuda.device_count()} GPU(s):")
+    print(f" - GPU Name: {torch.cuda.get_device_name(0)}")
+    print(f" - CUDA Version: {torch.version.cuda}")
+else:
+    print("No GPU found, PyTorch is using CPU.")
 
 def get_gpu_memory_size(gpu_name):
     if "A100" in gpu_name:
@@ -41,8 +48,8 @@ else:
 
 
 if __name__ =='__main__':
-    #benchmark_name = "DsParametricfMRI-second-all-max-Encoding_sep2024"
-    benchmark_name='ANNSet1fMRI-best-reliable-encoding'
+    benchmark_name = "DsParametricfMRI-second-all-max-Encoding_sep2024"
+    #benchmark_name='ANNSet1fMRI-best-reliable-encoding'
     modelname = '7B'
 
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
