@@ -1,6 +1,7 @@
 import argparse
 from neural_nlp.models.implementations import _PytorchTransformerWrapper, word_last, transformer_configurations,model_pool
 from neural_nlp import score as score_function
+from neural_nlp.models import model_pool
 import os
 import numpy as np
 import getpass
@@ -28,8 +29,10 @@ elif user=='ehoseini':
 #                 ('gpt2', 'encoder.h.11')]
 
 if __name__ =='__main__':
-    benchmark_name = 'DsParametricfMRI-full-90-max-encoding_aug2024'
-    model_name = "gpt2"
+    #benchmark_name = 'DsParametricfMRI-first-all-all-Encoding_sep2024'
+    benchmark_name = 'Pereira2018-lang-sentence-encoding'
+    #model_name = "roberta-base"
+    model_name = "random-embedding"
     # config_file=GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP[model_name]
     # model_file=GPT2_PRETRAINED_MODEL_ARCHIVE_MAP[model_name]
     benchmark_tsk = benchmark_name
