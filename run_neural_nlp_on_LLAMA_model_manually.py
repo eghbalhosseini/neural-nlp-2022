@@ -50,7 +50,7 @@ else:
 if __name__ =='__main__':
     benchmark_name = "DsParametricfMRI-second-all-rand-Encoding_sep2024"
     #benchmark_name='ANNSet1fMRI-best-reliable-encoding'
-    modelname = '7B'
+    modelname = '65B'
 
     weight_path = f'{LLAMA_path}/LLAMA_{modelname}/'
     config_path = f'{weight_path}/config.json'
