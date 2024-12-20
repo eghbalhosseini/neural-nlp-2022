@@ -48,7 +48,7 @@ else:
 
 
 if __name__ =='__main__':
-    benchmark_name = "DsParametricfMRI-first-all-min-Encoding_sep2024"
+    benchmark_name = "DsParametricfMRI-first-all-rand-Encoding_sep2024"
     #benchmark_name='ANNSet1fMRI-best-reliable-encoding'
     modelname = '7B'
 
